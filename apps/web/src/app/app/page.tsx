@@ -1,67 +1,67 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
-type Item = {
-  id: string;
-  title: string;
-  description: string | null;
-  price: number | null;
-  location: string | null;
-  image_url: string | null;
-};
-
 export default function AppPage() {
-  const [items, setItems] = useState<Item[]>([]);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("loading...");
+  const [items, setItems] = useState<any[]>([]);
+  const [debug, setDebug] = useState<any>(null);
 
   useEffect(() => {
-    supabase
-      .from("items")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (error) setStatus(error.message);
-        else setItems((data as Item[]) || []);
+    async function run() {
+      const result = await supabase.from("items").select("*").order("created_at", { ascending: false });
+
+      setDebug({
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        error: result.error,
+        count: result.data?.length ?? 0,
       });
+
+      if (result.error) {
+        setStatus(result.error.message);
+      } else {
+        setStatus("success");
+        setItems(result.data || []);
+      }
+    }
+
+    run();
   }, []);
 
   return (
     <div style={{ padding: 20 }}>
       <h2>Discover</h2>
-      {status && <p>{status}</p>}
+      <p>Status: {status}</p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 12,
-        }}
-      >
-        {items.map((item) => (
-          <div
-            key={item.id}
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 8,
-              padding: 12,
-              background: "#fff",
-            }}
-          >
-            <strong>{item.title}</strong>
-            <p>{item.description || "No description."}</p>
-            <p><strong>Price:</strong> ${item.price ?? "N/A"}</p>
-            <p><strong>Location:</strong> {item.location || "N/A"}</p>
-            {item.image_url ? (
-              <img
-                src={item.image_url}
-                alt={item.title}
-                style={{ width: "100%", borderRadius: 8, marginTop: 8 }}
-              />
-            ) : null}
-          </div>
-        ))}
-      </div>
+      <pre style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>
+        {JSON.stringify(debug, null, 2)}
+      </pre>
+
+      {items.map((item) => (
+        <div key={item.id} style={{ border: "1px solid #ddd", padding: 12, marginBottom: 12 }}>
+          <strong>{item.title}</strong>
+          <p>{item.description}</p>
+          <p>{item.location}</p>
+          <p>{item.price}</p>
+        </div>
+      ))}
     </div>
   );
 }
+Then do this
+Save the file in GitHub.
+Redeploy in Vercel with Use existing Build Cache unchecked.
+Open /app.
+Send me a screenshot of the page.
+Why this will solve it
+
+This will show us, on the live page itself:
+
+which Supabase URL the deployed app is actually using
+whether the anon key is present
+the exact live error object coming back from Supabase
+whether data is returning but not rendering
+
+Right now the DB is verified, so this diagnostic page is the fastest way to catch the real last issue.
