@@ -50,18 +50,4 @@ export default function AppPage() {
     </div>
   );
 }
-Then do this
-Save the file in GitHub.
-Redeploy in Vercel with Use existing Build Cache unchecked.
-Open /app.
-Send me a screenshot of the page.
-Why this will solve it
 
-This will show us, on the live page itself:
-
-which Supabase URL the deployed app is actually using
-whether the anon key is present
-the exact live error object coming back from Supabase
-whether data is returning but not rendering
-
-Right now the DB is verified, so this diagnostic page is the fastest way to catch the real last issue.
