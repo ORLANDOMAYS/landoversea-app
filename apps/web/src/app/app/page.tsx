@@ -70,6 +70,14 @@ export default function AppPage() {
           <p>{item.description}</p>
           <p>{item.location}</p>
           <p>{item.price}</p>
+       <button
+  onClick={async () => {
+    await supabase.from("items").delete().eq("id", item.id);
+    window.location.reload();
+  }}
+>
+  Delete
+</button>
         </div>
       ))}
     </div>
