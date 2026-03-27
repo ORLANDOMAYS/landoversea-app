@@ -39,12 +39,34 @@ export default function AppPage() {
 
     const form = e.target as any;
     
-    const newItem = {
-      title: form.title.value,
-      description: form.description.value,
-      location: form.location.value,
-      price: Number(form.price.value),
-    };
+   const fileName = file ? `${Date.now()}-${file.name}` : null;
+
+let imageUrl: string | null = null;
+
+if (file && fileName) {
+  const { error: uploadError } = await supabase.storage
+    .from("items")
+    .upload(fileName, file);
+
+  if (uploadError) {
+    alert(uploadError.message);
+    return;
+  }
+
+  const { data } = supabase.storage
+    .from("items")
+    .getPublicUrl(fileName);
+
+  imageUrl = data.publicUrl;
+}
+
+const newItem = {
+  title: form.title.value,
+  description: form.description.value,
+  location: form.location.value,
+  price: Number(form.price.value),
+  image_url: imageUrl,
+};
     const { error } = await supabase.from("items").insert([newItem]);
 
     if (error) {
