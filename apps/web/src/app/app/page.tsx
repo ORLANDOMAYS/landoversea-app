@@ -8,22 +8,23 @@ export default function AppPage() {
   const [items, setItems] = useState<any[]>([]);
   const [file, setFile] = useState<File | null>(null);
   
-  useEffect(() => {
-    async function run() {
-      const result = await supabase
-        .from("items")
-        .select("*")
-        .order("created_at", { ascending: false });
-      
-      if (result.error) {
-        setStatus(result.error.message);
-      } else {
-        setStatus("success");
-        setItems(result.data || []);
-      }
-      }
-    run();
-  }, []);
+ useEffect(() => {
+  async function run() {
+    const result = await supabase
+      .from("items")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (result.error) {
+      setStatus(result.error.message);
+    } else {
+      setStatus("success");
+      setItems(result.data || []);
+    }
+  }
+
+  run();
+}, []);
 
   return (
     <div style={{ padding: 20 }}>
