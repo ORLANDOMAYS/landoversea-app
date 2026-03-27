@@ -73,6 +73,7 @@ const newItem = {
       alert(error.message);
     } else {
       form.reset();
+      setFile(null);
       window.location.reload();
     }
   }}
@@ -166,6 +167,20 @@ const newItem = {
            }}
         >
           <strong>{item.title}</strong>
+          {item.image_url && (
+  <img
+    src={item.image_url}
+    alt={item.title}
+    style={{
+      width: "100%",
+      maxWidth: "300px",
+      borderRadius: "8px",
+      marginTop: "10px",
+      marginBottom: "10px",
+      objectFit: "cover",
+    }}
+  />
+)}
           <p>{item.description}</p>
           <p>{item.location}</p>
           <p>
