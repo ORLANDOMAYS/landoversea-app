@@ -21,8 +21,7 @@ export default function AppPage() {
         setStatus("success");
         setItems(result.data || []);
       }
-    }
-
+      }
     run();
   }, []);
 
@@ -34,7 +33,8 @@ export default function AppPage() {
 <h3>Add Item</h3>
 
 <form
-  onSubmit={async (e) => {
+  onSubmit={async (e) => 
+    {
     e.preventDefault();
 
     const form = e.target as any;
