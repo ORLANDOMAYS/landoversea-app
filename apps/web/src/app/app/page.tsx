@@ -6,9 +6,15 @@ import { supabase } from "../../lib/supabase";
 export default function AppPage() {
   const [status, setStatus] = useState("loading...");
   const [items, setItems] = useState<any[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  
   useEffect(() => {
     async function run() {
-      const result = await supabase.from("items").select("*").order("created_at", { ascending: false });
+      const result = await supabase
+        .from("items")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
       if (result.error) {
         setStatus(result.error.message);
       } else {
@@ -24,6 +30,7 @@ export default function AppPage() {
     <div style={{ padding: 20 }}>
       <h2>Discover</h2>
       <p>Status: {status}</p>
+      
 <h3>Add Item</h3>
 
 <form
@@ -31,14 +38,13 @@ export default function AppPage() {
     e.preventDefault();
 
     const form = e.target as any;
-
+    
     const newItem = {
       title: form.title.value,
       description: form.description.value,
       location: form.location.value,
       price: Number(form.price.value),
     };
-
     const { error } = await supabase.from("items").insert([newItem]);
 
     if (error) {
@@ -52,32 +58,118 @@ export default function AppPage() {
 >
   <input name="title" placeholder="Title" required />
   <br />
-
+  
   <input name="description" placeholder="Description" required />
   <br />
-
+  
   <input name="location" placeholder="Location" required />
   <br />
+  
+  <div style={{ marginBottom: "15px" }}>
+  <label 
+    style={{ 
+      fontWeight: "bold", 
+      display: "block", 
+      marginBottom: "6px" 
+    }}
+ >
+    Price ($)
+  </label>
+  <input
+    name="price"
+    type="number"
+    placeholder="0.00"
+    step="0.01"
+    min="0"
+    required
+    style={{
+      padding: "10px",
+      width: "220px",
+      borderRadius: "6px",
+      border: "1px solid #ccc",
+      fontSize: "14px",
+    }}
+  />
+</div>
 
-  <input name="price" type="number" placeholder="Price" required />
-  <br />
+<div style={{ marginBottom: "15px" }}>
+  <label 
+    style={{ 
+      fontWeight: "bold", 
+      display: "block", 
+      marginBottom: "6px" 
+    }}
+  >
+    Upload Image
+  </label>
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(e) => setFile(e.target.files?.[0] || null)}
+    style={{ padding: "6px" }}
+  />
 
-  <button type="submit">Add Item</button>
+  {file && (
+    <p style={{ fontSize: "12px", marginTop: "5px" }}>
+      Selected: {file.name}
+    </p>
+  )}
+</div>
+<button
+  type="submit"
+  style={{
+    padding: "10px 16px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    background: "#111",
+    color: "#fff",
+  }}
+>
+  Add Item
+</button>
 </form>
-      {items.map((item) => (
-        <div key={item.id} style={{ border: "1px solid #ddd", padding: 12, marginBottom: 12 }}>
+
+{/* ITEMS LIST */}
+<div style={{ marginTop: "20px" }}>
+  {items.map((item) => (
+        <div 
+          key={item.id} 
+          style={{ 
+            border: "1px solid #ddd", 
+            padding: 12, 
+            marginBottom: 12,
+            borderRadius: 8,
+           }}
+        >
           <strong>{item.title}</strong>
           <p>{item.description}</p>
           <p>{item.location}</p>
-          <p>{item.price}</p>
-       <button
-  onClick={async () => {
-    await supabase.from("items").delete().eq("id", item.id);
-    window.location.reload();
-  }}
->
-  Delete
-</button>
+          <p>
+            $
+            {Number(item.price).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </p>
+          <button
+            onClick={async () => {
+              await supabase.from("items").delete().eq("id", item.id);
+              window.location.reload();
+            }}
+            style={{
+              marginTop: "10px",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+              cursor: "pointer",
+              background: "#fff",
+            }}
+         >
+            Delete
+          </button>
+ 
         </div>
       ))}
     </div>
