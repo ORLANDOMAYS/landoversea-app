@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
 
 export default function AppPage() {
   const [status, setStatus] = useState("loading...");
   const [items, setItems] = useState<any[]>([]);
   const [file, setFile] = useState<File | null>(null);
   
-
-
   return (
     <div style={{ padding: 20 }}>
       <h2>Discover</h2>
