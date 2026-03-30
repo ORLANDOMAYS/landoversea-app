@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { supabase } from "../../../lib/supabase";
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 export default function AppPage() {
   const [status, setStatus] = useState("loading...");
