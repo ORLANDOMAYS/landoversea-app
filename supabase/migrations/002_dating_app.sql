@@ -91,7 +91,14 @@ create policy messages_read_match on public.messages
   );
 
 create policy messages_insert_self on public.messages
-  for insert with check (auth.uid() = sender_id);
+  for insert with check (
+    auth.uid() = sender_id
+    and exists (
+      select 1 from public.matches m
+      where m.id = match_id
+        and (m.user1_id = auth.uid() or m.user2_id = auth.uid())
+    )
+  );
 
 -- 6. Premium user locations (up to 3)
 create table if not exists public.user_locations (
@@ -161,7 +168,32 @@ create trigger on_swipe_check_match
 after insert on public.swipes
 for each row execute procedure public.check_match();
 
--- 8. Server-side verification function (prevents client from setting verified=true directly)
+-- 8. Protect verified and premium columns from direct client updates
+create or replace function public.protect_privileged_columns()
+returns trigger
+language plpgsql
+as $$
+begin
+  -- Allow changes only when the trusted flag is set by a security-definer function.
+  if coalesce(current_setting('app.trusted_update', true), '') != 'true' then
+    if new.verified is distinct from old.verified then
+      new.verified := old.verified;
+    end if;
+    if new.premium is distinct from old.premium then
+      new.premium := old.premium;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_privileged_cols on public.profiles;
+create trigger protect_privileged_cols
+before update on public.profiles
+for each row
+execute procedure public.protect_privileged_columns();
+
+-- 9. Server-side verification function (prevents client from setting verified=true directly)
 create or replace function public.verify_profile(user_uuid uuid)
 returns void
 language plpgsql
@@ -171,9 +203,11 @@ begin
   if user_uuid != auth.uid() then
     raise exception 'You can only verify your own profile';
   end if;
+  -- Set the trusted flag so the trigger allows the verified column update
+  perform set_config('app.trusted_update', 'true', true);
   update public.profiles set verified = true where id = user_uuid;
 end;
 $$;
 
--- 9. Enable realtime on messages
+-- 10. Enable realtime on messages
 alter publication supabase_realtime add table public.messages;

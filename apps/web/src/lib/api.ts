@@ -159,7 +159,7 @@ export async function getMatches(userId: string): Promise<MatchWithProfile[]> {
     const otherId = m.user1_id === userId ? m.user2_id : m.user1_id;
     const profile = (profiles ?? []).find((p) => p.id === otherId);
     const lastMessage = (messages ?? []).find((msg) => msg.match_id === m.id);
-    return { ...m, profile: profile!, lastMessage: lastMessage ?? null };
+    return { ...m, profile: profile ?? null, lastMessage: lastMessage ?? null } as MatchWithProfile;
   });
 }
 
