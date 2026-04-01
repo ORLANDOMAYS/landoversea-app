@@ -154,13 +154,18 @@ export async function getMatches(userId) {
 
 export async function checkNewMatch(userId, swipedId) {
   if (!supabase) return null;
+  // Use ensure_match RPC to recover matches lost to concurrent-swipe race
+  const { data: matchId } = await supabase.rpc("ensure_match", {
+    other_user: swipedId,
+  });
+
+  if (!matchId) return null;
+
   const { data } = await supabase
     .from("matches")
     .select("*")
-    .or(
-      `and(user1_id.eq.${userId},user2_id.eq.${swipedId}),and(user1_id.eq.${swipedId},user2_id.eq.${userId})`
-    )
-    .maybeSingle();
+    .eq("id", matchId)
+    .single();
   return data;
 }
 

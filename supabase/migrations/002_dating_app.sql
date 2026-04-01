@@ -165,7 +165,8 @@ begin
 
       if not match_exists then
         insert into public.matches (user1_id, user2_id)
-        values (uid1, uid2);
+        values (uid1, uid2)
+        on conflict (user1_id, user2_id) do nothing;
       end if;
     end if;
   end if;
@@ -178,7 +179,46 @@ create trigger on_swipe_check_match
 after insert on public.swipes
 for each row execute procedure public.check_match();
 
--- 8. Protect verified and premium columns from direct client updates
+-- 8. Ensure match RPC – recovers matches lost to concurrent-swipe race condition
+create or replace function public.ensure_match(other_user uuid)
+returns uuid
+language plpgsql
+security definer
+as $$
+declare
+  me uuid := auth.uid();
+  uid1 uuid;
+  uid2 uuid;
+  found_match uuid;
+begin
+  uid1 := least(me, other_user);
+  uid2 := greatest(me, other_user);
+
+  -- Check if both users swiped like/superlike on each other
+  if exists (
+    select 1 from public.swipes
+    where swiper_id = me and swiped_id = other_user
+      and direction in ('like','superlike')
+  ) and exists (
+    select 1 from public.swipes
+    where swiper_id = other_user and swiped_id = me
+      and direction in ('like','superlike')
+  ) then
+    -- Create match if missing
+    insert into public.matches (user1_id, user2_id)
+    values (uid1, uid2)
+    on conflict (user1_id, user2_id) do nothing;
+  end if;
+
+  -- Return match id (or null)
+  select id into found_match from public.matches
+  where user1_id = uid1 and user2_id = uid2;
+
+  return found_match;
+end;
+$$;
+
+-- 9. Protect verified and premium columns from direct client updates
 create or replace function public.protect_privileged_columns()
 returns trigger
 language plpgsql
