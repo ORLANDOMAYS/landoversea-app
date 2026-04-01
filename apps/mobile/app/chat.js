@@ -13,6 +13,7 @@ import { useLocalSearchParams } from "expo-router";
 import {
   getCurrentUser,
   getProfile,
+  getMatches,
   getMessages,
   sendMessage,
   subscribeToMessages,
@@ -23,6 +24,7 @@ export default function ChatScreen() {
   const { matchId, userId: paramUserId } = useLocalSearchParams();
   const [userId, setUserId] = useState(paramUserId || null);
   const [myLang, setMyLang] = useState("en");
+  const [otherLang, setOtherLang] = useState("en");
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -33,10 +35,17 @@ export default function ChatScreen() {
       const user = await getCurrentUser();
       if (!user) return;
       setUserId(user.id);
-      const profile = await getProfile(user.id);
+      const [profile, msgs, matches] = await Promise.all([
+        getProfile(user.id),
+        getMessages(matchId),
+        getMatches(user.id),
+      ]);
+
       if (profile?.language) setMyLang(profile.language);
-      const msgs = await getMessages(matchId);
       setMessages(msgs);
+
+      const match = matches.find((m) => m.id === matchId);
+      if (match?.profile?.language) setOtherLang(match.profile.language);
     }
     init();
   }, [matchId]);
@@ -61,10 +70,12 @@ export default function ChatScreen() {
     setInput("");
 
     let translated = null;
-    try {
-      translated = await translateText(body, myLang, myLang === "en" ? "es" : "en");
-    } catch {
-      // translation failed, send without
+    if (myLang !== otherLang) {
+      try {
+        translated = await translateText(body, myLang, otherLang);
+      } catch {
+        // translation failed, send without
+      }
     }
 
     await sendMessage(matchId, userId, body, myLang, translated);
