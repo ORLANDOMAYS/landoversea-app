@@ -118,7 +118,17 @@ create policy locations_read_all on public.user_locations
   for select using (true);
 
 create policy locations_insert_self on public.user_locations
-  for insert with check (auth.uid() = user_id);
+  for insert with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.premium = true
+    )
+    and (
+      select count(*) from public.user_locations ul
+      where ul.user_id = auth.uid()
+    ) < 3
+  );
 
 create policy locations_update_self on public.user_locations
   for update using (auth.uid() = user_id);
