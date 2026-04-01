@@ -10,6 +10,9 @@ export default function AppPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
+    }).catch(() => {
+      setUser(null);
+    }).finally(() => {
       setLoading(false);
     });
   }, []);
