@@ -22,15 +22,19 @@ export default function VerifyPage() {
     };
   }, [stream]);
 
+  // Assign srcObject once the video element is rendered (step === 'camera')
+  useEffect(() => {
+    if (step === "camera" && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [step, stream]);
+
   async function startCamera() {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: 640, height: 480 },
       });
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
       setStep("camera");
     } catch {
       setStep("error");

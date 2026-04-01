@@ -12,7 +12,7 @@ export default function AuthPage() {
   const [sending, setSending] = useState(false);
 
   async function sendLink() {
-    if (!email) return;
+    if (!email || sending) return;
     setSending(true);
     setStatus("Sending...");
     const { error } = await supabase.auth.signInWithOtp({ email });
