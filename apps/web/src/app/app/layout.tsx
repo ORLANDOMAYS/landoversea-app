@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Heart, MessageCircle, User, Settings, Flame } from "lucide-react";
+import { MessageCircle, User, Settings, Flame } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 const NAV_ITEMS = [
@@ -30,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Heart className="w-10 h-10 text-rose-600 animate-pulse" />
+        <img src="/logo.webp" alt="LandOverSea" className="h-10 w-auto animate-pulse" />
       </div>
     );
   }
@@ -40,8 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Top bar */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <Heart className="w-6 h-6 text-rose-600" fill="currentColor" />
-          <span className="text-lg font-bold text-gray-900">LandOverSea</span>
+          <img src="/logo.webp" alt="LandOverSea" className="h-8 w-auto" />
         </div>
       </header>
 

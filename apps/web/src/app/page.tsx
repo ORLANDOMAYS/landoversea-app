@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Globe, Shield, MapPin, MessageCircle, ArrowRight } from "lucide-react";
+import { Globe, Shield, MapPin, MessageCircle, ArrowRight } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function LandingPage() {
@@ -20,8 +20,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
         <div className="flex items-center gap-2">
-          <Heart className="w-8 h-8 text-rose-600" fill="currentColor" />
-          <span className="text-2xl font-bold text-gray-900">LandOverSea</span>
+          <img src="/logo.webp" alt="LandOverSea" className="h-10 w-auto" />
         </div>
         <div className="flex gap-3">
           {loggedIn ? (

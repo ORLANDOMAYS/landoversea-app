@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Mail, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 export default function AuthPage() {
@@ -32,8 +32,7 @@ export default function AuthPage() {
 
         <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
           <div className="flex items-center gap-2 mb-6">
-            <Heart className="w-7 h-7 text-rose-600" fill="currentColor" />
-            <span className="text-xl font-bold">LandOverSea</span>
+            <img src="/logo.webp" alt="LandOverSea" className="h-9 w-auto" />
           </div>
 
           <h1 className="text-2xl font-bold mb-2">Welcome</h1>
