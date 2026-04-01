@@ -5,10 +5,18 @@ import { supabase } from "../../lib/supabase";
 
 export default function AppPage() {
   const [user, setUser] = useState<null | { email?: string }>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setLoading(false);
+    });
   }, []);
+
+  if (loading) {
+    return <p>Loading...</p>;
+  }
 
   if (!user) {
     return (
