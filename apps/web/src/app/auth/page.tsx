@@ -21,7 +21,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-pink-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <button
           onClick={() => router.push("/")}
@@ -32,7 +32,7 @@ export default function AuthPage() {
 
         <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
           <div className="flex items-center gap-2 mb-6">
-            <img src="/logo.webp" alt="LandOverSea" className="h-14 w-auto" />
+            <img src="/logo.webp" alt="LandOverSea" className="h-20 w-auto" />
           </div>
 
           <h1 className="text-2xl font-bold mb-2">Welcome</h1>
@@ -49,14 +49,14 @@ export default function AuthPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendLink()}
                 placeholder="you@email.com"
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition"
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition"
               />
             </div>
 
             <button
               onClick={sendLink}
               disabled={sending || !email}
-              className="w-full py-3 bg-rose-600 text-white rounded-xl font-semibold hover:bg-rose-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-pink-600 text-white rounded-xl font-semibold hover:bg-pink-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {sending ? "Sending..." : "Send Magic Link"}
             </button>

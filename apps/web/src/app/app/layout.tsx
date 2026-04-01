@@ -59,7 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               key={item.href}
               onClick={() => router.push(item.href)}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${
-                isActive ? "text-rose-600" : "text-gray-400 hover:text-gray-600"
+                isActive ? "text-pink-600" : "text-gray-400 hover:text-gray-600"
               }`}
             >
               <item.icon className="w-5 h-5" fill={isActive ? "currentColor" : "none"} />
