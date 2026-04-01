@@ -28,7 +28,7 @@ export default function SwipePage() {
 
   const handleSwipe = useCallback(
     async (direction: "like" | "pass" | "superlike") => {
-      if (!userId || currentIndex >= profiles.length) return;
+      if (!userId || currentIndex >= profiles.length || swipeDirection !== null) return;
       const profile = profiles[currentIndex];
 
       setSwipeDirection(direction === "pass" ? "left" : "right");
@@ -48,7 +48,7 @@ export default function SwipePage() {
         setCurrentIndex((prev) => prev + 1);
       }, 300);
     },
-    [userId, currentIndex, profiles]
+    [userId, currentIndex, profiles, swipeDirection]
   );
 
   const currentProfile = profiles[currentIndex];
@@ -156,19 +156,22 @@ export default function SwipePage() {
       <div className="flex items-center gap-6 mt-6">
         <button
           onClick={() => handleSwipe("pass")}
-          className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border border-gray-200 hover:scale-110 transition"
+          disabled={swipeDirection !== null}
+          className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border border-gray-200 hover:scale-110 transition disabled:opacity-50"
         >
           <X className="w-7 h-7 text-gray-500" />
         </button>
         <button
           onClick={() => handleSwipe("superlike")}
-          className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center border border-gray-200 hover:scale-110 transition"
+          disabled={swipeDirection !== null}
+          className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center border border-gray-200 hover:scale-110 transition disabled:opacity-50"
         >
           <Star className="w-6 h-6 text-amber-500" fill="currentColor" />
         </button>
         <button
           onClick={() => handleSwipe("like")}
-          className="w-14 h-14 rounded-full bg-rose-600 shadow-lg flex items-center justify-center hover:scale-110 transition"
+          disabled={swipeDirection !== null}
+          className="w-14 h-14 rounded-full bg-rose-600 shadow-lg flex items-center justify-center hover:scale-110 transition disabled:opacity-50"
         >
           <Heart className="w-7 h-7 text-white" fill="currentColor" />
         </button>

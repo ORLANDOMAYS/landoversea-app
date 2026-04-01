@@ -161,5 +161,19 @@ create trigger on_swipe_check_match
 after insert on public.swipes
 for each row execute procedure public.check_match();
 
--- 8. Enable realtime on messages
+-- 8. Server-side verification function (prevents client from setting verified=true directly)
+create or replace function public.verify_profile(user_uuid uuid)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  if user_uuid != auth.uid() then
+    raise exception 'You can only verify your own profile';
+  end if;
+  update public.profiles set verified = true where id = user_uuid;
+end;
+$$;
+
+-- 9. Enable realtime on messages
 alter publication supabase_realtime add table public.messages;

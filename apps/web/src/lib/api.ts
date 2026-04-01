@@ -266,3 +266,12 @@ export async function addUserLocation(
 export async function removeUserLocation(locationId: string) {
   await supabase.from("user_locations").delete().eq("id", locationId);
 }
+
+/* ── Verification (server-side RPC) ──────────────────────────── */
+
+export async function verifyProfile(userId: string): Promise<boolean> {
+  const { error } = await supabase.rpc("verify_profile", {
+    user_uuid: userId,
+  });
+  return !error;
+}

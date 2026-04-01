@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CheckCircle, XCircle, ArrowLeft, Shield } from "lucide-react";
-import { getCurrentUser, upsertProfile } from "../../../lib/api";
-import type { Profile } from "../../../lib/types";
+import { getCurrentUser, verifyProfile } from "../../../lib/api";
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -79,8 +78,8 @@ export default function VerifyPage() {
 
     // If at least 10% of the image has skin tones, consider it a face
     if (skinRatio > 0.1) {
-      await upsertProfile(userId, { verified: true } as Partial<Profile>);
-      setStep("success");
+      const success = await verifyProfile(userId);
+      setStep(success ? "success" : "error");
     } else {
       setStep("error");
     }
