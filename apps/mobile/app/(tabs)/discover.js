@@ -35,19 +35,21 @@ export default function DiscoverScreen() {
       if (!userId || currentIndex >= profiles.length || swiping) return;
       setSwiping(true);
 
-      const profile = profiles[currentIndex];
-      await recordSwipe(userId, profile.id, direction);
+      try {
+        const profile = profiles[currentIndex];
+        await recordSwipe(userId, profile.id, direction);
 
-      if (direction !== "pass") {
-        const match = await checkNewMatch(userId, profile.id);
-        if (match) {
-          Alert.alert("It's a Match!", `You matched with ${profile.display_name || "someone"}!`);
+        if (direction !== "pass") {
+          const match = await checkNewMatch(userId, profile.id);
+          if (match) {
+            Alert.alert("It's a Match!", `You matched with ${profile.display_name || "someone"}!`);
+          }
         }
+      } finally {
+        setCurrentIndex((prev) => prev + 1);
+        translateX.value = 0;
+        setSwiping(false);
       }
-
-      setCurrentIndex((prev) => prev + 1);
-      translateX.value = 0;
-      setSwiping(false);
     },
     [userId, currentIndex, profiles, swiping]
   );

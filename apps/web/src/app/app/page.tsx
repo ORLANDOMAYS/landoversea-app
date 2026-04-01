@@ -34,18 +34,20 @@ export default function SwipePage() {
       setSwipeDirection(direction === "pass" ? "left" : "right");
 
       setTimeout(async () => {
-        await recordSwipe(userId, profile.id, direction);
+        try {
+          await recordSwipe(userId, profile.id, direction);
 
-        if (direction !== "pass") {
-          const match = await checkNewMatch(userId, profile.id);
-          if (match) {
-            setMatchPopup(profile.display_name ?? "Someone");
-            setTimeout(() => setMatchPopup(null), 3000);
+          if (direction !== "pass") {
+            const match = await checkNewMatch(userId, profile.id);
+            if (match) {
+              setMatchPopup(profile.display_name ?? "Someone");
+              setTimeout(() => setMatchPopup(null), 3000);
+            }
           }
+        } finally {
+          setSwipeDirection(null);
+          setCurrentIndex((prev) => prev + 1);
         }
-
-        setSwipeDirection(null);
-        setCurrentIndex((prev) => prev + 1);
       }, 300);
     },
     [userId, currentIndex, profiles, swipeDirection]
