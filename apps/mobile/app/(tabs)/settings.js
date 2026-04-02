@@ -16,12 +16,21 @@ const LANGUAGES = [
   { code: "es", label: "Spanish" },
   { code: "fr", label: "French" },
   { code: "de", label: "German" },
+  { code: "it", label: "Italian" },
+  { code: "pt", label: "Portuguese" },
   { code: "ja", label: "Japanese" },
   { code: "ko", label: "Korean" },
   { code: "zh", label: "Chinese" },
-  { code: "pt", label: "Portuguese" },
   { code: "ar", label: "Arabic" },
+  { code: "hi", label: "Hindi" },
   { code: "th", label: "Thai" },
+  { code: "vi", label: "Vietnamese" },
+  { code: "ru", label: "Russian" },
+  { code: "tr", label: "Turkish" },
+  { code: "pl", label: "Polish" },
+  { code: "nl", label: "Dutch" },
+  { code: "sv", label: "Swedish" },
+  { code: "tl", label: "Tagalog" },
 ];
 
 export default function SettingsScreen() {
@@ -137,9 +146,18 @@ export default function SettingsScreen() {
         </View>
       )}
       {!profile?.premium && (
-        <Pressable style={styles.upgradeBtn}>
-          <Text style={styles.upgradeBtnText}>Upgrade to Premium — $9.99/mo</Text>
-        </Pressable>
+        <View>
+          <Text style={styles.section}>Premium Plans</Text>
+          <Pressable style={styles.upgradeBtn}>
+            <Text style={styles.upgradeBtnText}>Weekly — $9.99/week</Text>
+          </Pressable>
+          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#e11d48", marginTop: 8 }]}>
+            <Text style={styles.upgradeBtnText}>Monthly — $35.99/month</Text>
+          </Pressable>
+          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#7c3aed", marginTop: 8 }]}>
+            <Text style={styles.upgradeBtnText}>Yearly — $199.99/year (Save 57%)</Text>
+          </Pressable>
+        </View>
       )}
 
       <Pressable style={styles.logoutBtn} onPress={logout}>

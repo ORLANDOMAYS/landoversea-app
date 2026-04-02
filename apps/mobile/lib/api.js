@@ -256,3 +256,25 @@ export async function verifyProfile(userId) {
   });
   return !error;
 }
+
+/* ── Coaches ──────────────────────────────────────────────────── */
+
+export async function getCoaches() {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("coaches")
+    .select("*")
+    .eq("active", true)
+    .order("rating", { ascending: false });
+  return data ?? [];
+}
+
+export async function getCoachById(coachId) {
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("coaches")
+    .select("*")
+    .eq("id", coachId)
+    .single();
+  return data;
+}
