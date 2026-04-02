@@ -34,8 +34,9 @@
       "package": "com.landoversea.app",
       "versionCode": 1,
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ],
       "intentFilters": [
         {
@@ -51,7 +52,10 @@
               "scheme": "landoversea"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -60,7 +64,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "c4ceb6f0-ecc6-46eb-8c38-755eb81b8f40"
+      },
+      "router": {
+        "origin": false
       }
     },
     "owner": "landoversea",
