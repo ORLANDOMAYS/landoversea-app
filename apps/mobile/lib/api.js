@@ -275,6 +275,7 @@ export async function getCoachById(coachId) {
     .from("coaches")
     .select("*")
     .eq("id", coachId)
+    .eq("active", true)
     .single();
   return data;
 }

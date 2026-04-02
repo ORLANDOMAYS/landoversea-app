@@ -26,7 +26,7 @@ export default function RootLayout() {
         supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
-        });
+        }).catch((err) => console.warn("Deep link setSession failed:", err));
       }
     }
 
