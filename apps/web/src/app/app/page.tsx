@@ -2,26 +2,48 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, X, Star, MapPin, Shield } from "lucide-react";
-import { getCurrentUser, getDiscoverProfiles, recordSwipe, checkNewMatch } from "../../lib/api";
+import { Heart, X, Star, MapPin, Shield, Undo2, Zap, Crown, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  getCurrentUser,
+  getProfile,
+  getDiscoverProfiles,
+  recordSwipe,
+  checkNewMatch,
+  checkSwipeLimit,
+  incrementSwipeCount,
+  undoLastSwipe,
+  activateBoost,
+  getActiveSubscription,
+} from "../../lib/api";
 import type { ProfileWithPhotos } from "../../lib/types";
 
 export default function SwipePage() {
+  const router = useRouter();
   const [profiles, setProfiles] = useState<ProfileWithPhotos[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [matchPopup, setMatchPopup] = useState<string | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [swipeLimitReached, setSwipeLimitReached] = useState(false);
+  const [boostActive, setBoostActive] = useState(false);
+  const [undoAvailable, setUndoAvailable] = useState(false);
+  const [swipeCount, setSwipeCount] = useState(0);
 
   useEffect(() => {
-    getCurrentUser().then((user) => {
+    getCurrentUser().then(async (user) => {
       if (user) {
         setUserId(user.id);
-        getDiscoverProfiles(user.id).then((p) => {
-          setProfiles(p);
-          setLoading(false);
-        });
+        const [p, profile, sub] = await Promise.all([
+          getDiscoverProfiles(user.id),
+          getProfile(user.id),
+          getActiveSubscription(user.id),
+        ]);
+        setProfiles(p);
+        setIsPremium(!!sub || (profile?.premium ?? false));
+        setLoading(false);
       }
     });
   }, []);
@@ -29,13 +51,32 @@ export default function SwipePage() {
   const handleSwipe = useCallback(
     async (direction: "like" | "pass" | "superlike") => {
       if (!userId || currentIndex >= profiles.length || swipeDirection !== null) return;
-      const profile = profiles[currentIndex];
 
+      // Check swipe limit for non-premium
+      if (!isPremium && direction !== "pass") {
+        const canSwipe = await checkSwipeLimit();
+        if (!canSwipe) {
+          setSwipeLimitReached(true);
+          return;
+        }
+      }
+
+      // Super likes are premium-only
+      if (direction === "superlike" && !isPremium) {
+        return;
+      }
+
+      const profile = profiles[currentIndex];
       setSwipeDirection(direction === "pass" ? "left" : "right");
 
       setTimeout(async () => {
         try {
           await recordSwipe(userId, profile.id, direction);
+
+          if (direction !== "pass") {
+            await incrementSwipeCount();
+            setSwipeCount((prev) => prev + 1);
+          }
 
           if (direction !== "pass") {
             const match = await checkNewMatch(userId, profile.id);
@@ -44,14 +85,34 @@ export default function SwipePage() {
               setTimeout(() => setMatchPopup(null), 3000);
             }
           }
+
+          setUndoAvailable(true);
         } finally {
           setSwipeDirection(null);
           setCurrentIndex((prev) => prev + 1);
         }
       }, 300);
     },
-    [userId, currentIndex, profiles, swipeDirection]
+    [userId, currentIndex, profiles, swipeDirection, isPremium]
   );
+
+  const handleUndo = useCallback(async () => {
+    if (!isPremium || !undoAvailable) return;
+    const result = await undoLastSwipe();
+    if (result.success && result.undone_profile_id) {
+      setCurrentIndex((prev) => Math.max(0, prev - 1));
+      setUndoAvailable(false);
+    }
+  }, [isPremium, undoAvailable]);
+
+  const handleBoost = useCallback(async () => {
+    if (!isPremium) return;
+    const boostId = await activateBoost(30);
+    if (boostId) {
+      setBoostActive(true);
+      setTimeout(() => setBoostActive(false), 30 * 60 * 1000);
+    }
+  }, [isPremium]);
 
   const currentProfile = profiles[currentIndex];
 
@@ -61,6 +122,28 @@ export default function SwipePage() {
         <div className="text-center">
           <Heart className="w-12 h-12 text-rose-600 animate-pulse mx-auto mb-4" />
           <p className="text-gray-500">Finding people near you...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Swipe limit reached
+  if (swipeLimitReached && !isPremium) {
+    return (
+      <div className="flex items-center justify-center h-[70vh]">
+        <div className="text-center px-6 max-w-sm">
+          <Lock className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-700 mb-2">Daily Limit Reached</h2>
+          <p className="text-gray-500 mb-4">
+            {"You've used all 20 free swipes today. Upgrade to Premium for unlimited swipes!"}
+          </p>
+          <button
+            onClick={() => router.push("/app/settings")}
+            className="px-6 py-3 bg-gradient-to-r from-amber-500 to-rose-500 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-rose-600 transition flex items-center justify-center gap-2 mx-auto"
+          >
+            <Crown className="w-5 h-5" /> Upgrade to Premium
+          </button>
+          <p className="text-xs text-gray-400 mt-3">Resets at midnight</p>
         </div>
       </div>
     );
@@ -87,6 +170,22 @@ export default function SwipePage() {
 
   return (
     <div className="flex flex-col items-center px-4 py-4 max-w-md mx-auto">
+      {/* Boost indicator */}
+      {boostActive && (
+        <div className="w-full mb-2 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-xs text-center flex items-center justify-center gap-1">
+          <Zap className="w-3 h-3" /> Boost Active — Your profile is at the top!
+        </div>
+      )}
+
+      {/* Swipe counter for free users */}
+      {!isPremium && (
+        <div className="w-full mb-2 text-center">
+          <span className="text-xs text-gray-400">
+            {20 - swipeCount > 0 ? `${20 - swipeCount} swipes remaining today` : "No swipes left today"}
+          </span>
+        </div>
+      )}
+
       {/* Match Popup */}
       <AnimatePresence>
         {matchPopup && (
@@ -155,7 +254,21 @@ export default function SwipePage() {
       </AnimatePresence>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-6 mt-6">
+      <div className="flex items-center gap-4 mt-6">
+        {/* Undo (Premium) */}
+        <button
+          onClick={handleUndo}
+          disabled={!isPremium || !undoAvailable || swipeDirection !== null}
+          className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center border transition ${
+            isPremium && undoAvailable
+              ? "bg-white border-amber-300 hover:scale-110"
+              : "bg-gray-100 border-gray-200 opacity-40"
+          }`}
+          title={isPremium ? "Undo last swipe" : "Premium only"}
+        >
+          <Undo2 className="w-5 h-5 text-amber-500" />
+        </button>
+
         <button
           onClick={() => handleSwipe("pass")}
           disabled={swipeDirection !== null}
@@ -163,19 +276,40 @@ export default function SwipePage() {
         >
           <X className="w-7 h-7 text-gray-500" />
         </button>
+
         <button
           onClick={() => handleSwipe("superlike")}
-          disabled={swipeDirection !== null}
-          className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center border border-gray-200 hover:scale-110 transition disabled:opacity-50"
+          disabled={swipeDirection !== null || !isPremium}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center border transition ${
+            isPremium
+              ? "bg-white border-gray-200 hover:scale-110"
+              : "bg-gray-100 border-gray-200 opacity-40"
+          }`}
+          title={isPremium ? "Super Like" : "Premium only"}
         >
           <Star className="w-6 h-6 text-amber-500" fill="currentColor" />
         </button>
+
         <button
           onClick={() => handleSwipe("like")}
           disabled={swipeDirection !== null}
           className="w-14 h-14 rounded-full bg-rose-600 shadow-lg flex items-center justify-center hover:scale-110 transition disabled:opacity-50"
         >
           <Heart className="w-7 h-7 text-white" fill="currentColor" />
+        </button>
+
+        {/* Boost (Premium) */}
+        <button
+          onClick={handleBoost}
+          disabled={!isPremium || boostActive || swipeDirection !== null}
+          className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center border transition ${
+            isPremium && !boostActive
+              ? "bg-white border-purple-300 hover:scale-110"
+              : "bg-gray-100 border-gray-200 opacity-40"
+          }`}
+          title={isPremium ? "Boost your profile" : "Premium only"}
+        >
+          <Zap className="w-5 h-5 text-purple-500" />
         </button>
       </div>
 
