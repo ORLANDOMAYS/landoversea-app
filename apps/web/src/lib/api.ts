@@ -313,7 +313,8 @@ export async function createSubscription(
   if (tier === "weekly") {
     endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   } else if (tier === "monthly") {
-    endDate = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    const daysInNextMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0).getDate();
+    endDate = new Date(now.getFullYear(), now.getMonth() + 1, Math.min(now.getDate(), daysInNextMonth));
   } else {
     endDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
   }

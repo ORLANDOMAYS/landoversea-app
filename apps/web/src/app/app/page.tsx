@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, X, Star, MapPin, Shield, Undo2, Zap, Crown, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -31,6 +31,7 @@ export default function SwipePage() {
   const [boostActive, setBoostActive] = useState(false);
   const [undoAvailable, setUndoAvailable] = useState(false);
   const [swipeCount, setSwipeCount] = useState(0);
+  const isSwipingRef = useRef(false);
 
   useEffect(() => {
     getCurrentUser().then(async (user) => {
@@ -56,19 +57,22 @@ export default function SwipePage() {
 
   const handleSwipe = useCallback(
     async (direction: "like" | "pass" | "superlike") => {
-      if (!userId || currentIndex >= profiles.length || swipeDirection !== null) return;
+      if (!userId || currentIndex >= profiles.length || swipeDirection !== null || isSwipingRef.current) return;
+      isSwipingRef.current = true;
 
       // Check swipe limit for non-premium
       if (!isPremium && direction !== "pass") {
         const canSwipe = await checkSwipeLimit();
         if (!canSwipe) {
           setSwipeLimitReached(true);
+          isSwipingRef.current = false;
           return;
         }
       }
 
       // Super likes are premium-only
       if (direction === "superlike" && !isPremium) {
+        isSwipingRef.current = false;
         return;
       }
 
@@ -96,6 +100,7 @@ export default function SwipePage() {
         } finally {
           setSwipeDirection(null);
           setCurrentIndex((prev) => prev + 1);
+          isSwipingRef.current = false;
         }
       }, 300);
     },
