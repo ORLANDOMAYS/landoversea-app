@@ -13,6 +13,8 @@ export interface Profile {
   longitude: number | null;
   city: string | null;
   country: string | null;
+  daily_swipes_used: number;
+  last_swipe_reset: string | null;
   created_at: string;
 }
 

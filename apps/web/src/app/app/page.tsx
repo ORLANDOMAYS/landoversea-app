@@ -43,6 +43,12 @@ export default function SwipePage() {
         ]);
         setProfiles(p);
         setIsPremium(!!sub || (profile?.premium ?? false));
+        // Sync swipe count from server so counter is accurate on page load
+        const today = new Date().toISOString().slice(0, 10);
+        const lastReset = profile?.last_swipe_reset?.slice(0, 10);
+        if (lastReset === today) {
+          setSwipeCount(profile?.daily_swipes_used ?? 0);
+        }
         setLoading(false);
       }
     });

@@ -71,10 +71,11 @@ export default function CoachDashboardPage() {
   async function handleSaveProfile() {
     if (!coach) return;
     setSaving(true);
-    await updateCoachProfile(coach.id, {
+    const updated = await updateCoachProfile(coach.id, {
       bio,
       hourly_rate: parseFloat(hourlyRate) || coach.hourly_rate,
     });
+    if (updated) setCoach(updated);
     setSaving(false);
     setEditingBio(false);
   }
