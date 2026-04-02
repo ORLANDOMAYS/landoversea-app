@@ -21,12 +21,17 @@ export default function RootLayout() {
         parsed.queryParams?.token;
       const refreshToken = parsed.queryParams?.refresh_token;
 
-      if (accessToken && refreshToken) {
-        // Only call setSession — onAuthStateChange will handle navigation
-        supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        }).catch((err) => console.warn("Deep link setSession failed:", err));
+      // PKCE flow: Supabase v2 sends a `code` param that must be exchanged
+      const code = parsed.queryParams?.code;
+      if (code) {
+        supabase.auth
+          .exchangeCodeForSession(code)
+          .catch((err) => console.warn("Deep link code exchange failed:", err));
+      } else if (accessToken && refreshToken) {
+        // Implicit flow fallback
+        supabase.auth
+          .setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .catch((err) => console.warn("Deep link setSession failed:", err));
       }
     }
 
