@@ -22,9 +22,11 @@ export default function RootLayout() {
       const refreshToken = parsed.queryParams?.refresh_token;
 
       if (accessToken && refreshToken) {
-        supabase.auth
-          .setSession({ access_token: accessToken, refresh_token: refreshToken })
-          .then(() => router.replace("/(tabs)/discover"));
+        // Only call setSession — onAuthStateChange will handle navigation
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
       }
     }
 
