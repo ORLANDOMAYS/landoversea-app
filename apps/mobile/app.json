@@ -64,13 +64,13 @@
     },
     "extra": {
       "eas": {
-        "projectId": "c4ceb6f0-ecc6-46eb-8c38-755eb81b8f40"
+        "projectId": "617bda0f-5cd5-4a62-a565-4d3c2a9c3d74"
       },
       "router": {
         "origin": false
       }
     },
-    "owner": "landoversea",
+    "owner": "landoversea1",
     "plugins": [
       "expo-router",
       [
