@@ -15,15 +15,34 @@ export default function CoachDetailScreen() {
   const { coachId } = useLocalSearchParams();
   const router = useRouter();
   const [coach, setCoach] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (coachId) getCoachById(coachId).then(setCoach);
+    if (coachId) {
+      setLoading(true);
+      getCoachById(coachId)
+        .then(setCoach)
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
   }, [coachId]);
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.loading}>Loading coach...</Text>
+      </View>
+    );
+  }
 
   if (!coach) {
     return (
       <View style={styles.center}>
-        <Text style={styles.loading}>Loading coach...</Text>
+        <Text style={styles.notFound}>Coach not found</Text>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>Go Back</Text>
+        </Pressable>
       </View>
     );
   }
@@ -116,6 +135,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   loading: { fontSize: 16, color: "#666" },
+  notFound: { fontSize: 18, color: "#888", marginBottom: 16 },
+  backBtn: {
+    backgroundColor: "#e11d48",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  backBtnText: { color: "#fff", fontSize: 15, fontWeight: "600" },
   profileHeader: { alignItems: "center", marginBottom: 20 },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 12 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
