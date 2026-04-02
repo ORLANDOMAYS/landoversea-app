@@ -75,6 +75,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="chat" options={{ title: "Chat" }} />
         <Stack.Screen name="verify" options={{ title: "Verify Profile" }} />
+        <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
         <Stack.Screen name="video-call" options={{ headerShown: false }} />
         <Stack.Screen
           name="coach-detail"
