@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from "lucide-react";
-import { getCurrentUser, updateVideoCallStatus } from "../../../lib/api";
+import { getCurrentUser, updateVideoCallStatus } from "../../lib/api";
 
 function VideoCallContent() {
   const searchParams = useSearchParams();

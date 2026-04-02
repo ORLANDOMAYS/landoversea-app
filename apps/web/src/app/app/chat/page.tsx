@@ -140,7 +140,7 @@ function ChatContent() {
             onClick={async () => {
               const call = await initiateVideoCall(matchId, userId, otherProfile.id);
               if (call) {
-                window.open(`/app/video-call?callId=${call.id}&matchId=${matchId}`, "_blank");
+                window.open(`/video-call?callId=${call.id}&matchId=${matchId}`, "_blank");
               }
             }}
             className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition"
