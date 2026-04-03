@@ -31,7 +31,7 @@ export default function AuthScreen() {
   return (
     <View style={styles.container}>
       <Image
-        source={require("../assets/logo.webp")}
+        source={require("../assets/logo-full.png")}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -58,7 +58,7 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
-  logo: { width: 120, height: 120, alignSelf: "center", marginBottom: 24 },
+  logo: { width: 240, height: 120, alignSelf: "center", marginBottom: 24 },
   title: { fontSize: 28, fontWeight: "800", marginBottom: 8, textAlign: "center" },
   subtitle: { fontSize: 16, color: "#666", marginBottom: 24, textAlign: "center" },
   input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 16 },

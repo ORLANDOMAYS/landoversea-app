@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 56" fill="none">
+  <defs>
+    <linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="40%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#fb7185"/>
+    </linearGradient>
+    <linearGradient id="ag" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="50%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="gg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Compact heart-globe icon -->
+  <g transform="translate(22, 24)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="url(#gg)" stroke-width="1.5" opacity="0.3"/>
+    <path d="M0,9 C0,9 -13,-4 -13,-11 C-13,-16 -7,-19 0,-13 C7,-19 13,-16 13,-11 C13,-4 0,9 0,9 Z" 
+          fill="url(#hg)" opacity="0.9"/>
+  </g>
+
+  <!-- Modern inline typography -->
+  <text x="46" y="24" font-family="'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="800" fill="#1e293b" letter-spacing="2">LAND</text>
+  <text x="130" y="24" font-family="'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="300" fill="#94a3b8" letter-spacing="2">OVER</text>
+  <text x="210" y="24" font-family="'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="800" fill="url(#ag)" letter-spacing="2">SEA</text>
+  
+  <!-- Thin accent line -->
+  <rect x="46" y="32" width="220" height="1.5" rx="0.75" fill="url(#ag)" opacity="0.3"/>
+  
+  <!-- Compact tagline -->
+  <text x="156" y="46" font-family="'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="5.5" font-weight="500" fill="#94a3b8" letter-spacing="3" text-anchor="middle">CONNECTING HEARTS ACROSS BORDERS</text>
+</svg>

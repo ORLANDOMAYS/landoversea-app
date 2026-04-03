@@ -30,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <img src="/logo.webp" alt="LandOverSea" className="h-20 w-auto animate-pulse" />
+        <img src="/logo.svg" alt="LandOverSea" className="h-20 w-auto animate-pulse" />
       </div>
     );
   }
@@ -40,7 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Top bar */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <img src="/logo.webp" alt="LandOverSea" className="h-12 w-auto" />
+          <img src="/logo-compact.svg" alt="LandOverSea" className="h-10 w-auto" />
         </div>
       </header>
 
