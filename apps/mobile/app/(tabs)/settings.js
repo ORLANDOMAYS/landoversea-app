@@ -148,14 +148,14 @@ export default function SettingsScreen() {
       {!profile?.premium && (
         <View>
           <Text style={styles.section}>Premium Plans</Text>
-          <Pressable style={styles.upgradeBtn}>
+          <Pressable style={styles.upgradeBtn} onPress={() => Alert.alert("Coming Soon", "In-app purchases will be available soon.")}>
             <Text style={styles.upgradeBtnText}>Weekly — $9.99/week</Text>
           </Pressable>
-          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#e11d48", marginTop: 8 }]}>
+          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#e11d48", marginTop: 8 }]} onPress={() => Alert.alert("Coming Soon", "In-app purchases will be available soon.")}>
             <Text style={styles.upgradeBtnText}>Monthly — $35.99/month</Text>
           </Pressable>
-          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#7c3aed", marginTop: 8 }]}>
-            <Text style={styles.upgradeBtnText}>Yearly — $199.99/year (Save 57%)</Text>
+          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#7c3aed", marginTop: 8 }]} onPress={() => Alert.alert("Coming Soon", "In-app purchases will be available soon.")}>
+            <Text style={styles.upgradeBtnText}>Yearly — $199.99/year (Save 54%)</Text>
           </Pressable>
         </View>
       )}
