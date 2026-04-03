@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, Pressable, Image, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useRouter, useFocusEffect } from "expo-router";
 import { getCurrentUser, getMatches } from "../../lib/api";
 
 export default function MatchesScreen() {
@@ -36,10 +35,19 @@ export default function MatchesScreen() {
         />
         <View style={styles.matchInfo}>
           <Text style={styles.matchName}>{p?.display_name || "Unknown"}</Text>
+          {p?.language && (
+            <Text style={styles.langBadge}>🌐 {p.language.toUpperCase()}</Text>
+          )}
           <Text style={styles.lastMsg} numberOfLines={1}>
             {item.lastMessage?.body || "Say hello!"}
           </Text>
         </View>
+        <Pressable
+          style={styles.videoBtn}
+          onPress={() => router.push(`/video-call?matchId=${item.id}`)}
+        >
+          <Text style={{ fontSize: 20 }}>📹</Text>
+        </Pressable>
       </Pressable>
     );
   }
@@ -87,5 +95,14 @@ const styles = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 12 },
   matchInfo: { flex: 1 },
   matchName: { fontSize: 17, fontWeight: "600" },
+  langBadge: { fontSize: 11, color: "#e11d48", marginTop: 2 },
   lastMsg: { fontSize: 14, color: "#888", marginTop: 4 },
+  videoBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 });

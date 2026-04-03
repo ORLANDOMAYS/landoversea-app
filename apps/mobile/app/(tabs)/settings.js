@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   getProfile,
   upsertProfile,
+  upgradeToPremium,
   getUserLocations,
   addUserLocation,
   removeUserLocation,
@@ -16,12 +17,21 @@ const LANGUAGES = [
   { code: "es", label: "Spanish" },
   { code: "fr", label: "French" },
   { code: "de", label: "German" },
+  { code: "it", label: "Italian" },
+  { code: "pt", label: "Portuguese" },
   { code: "ja", label: "Japanese" },
   { code: "ko", label: "Korean" },
   { code: "zh", label: "Chinese" },
-  { code: "pt", label: "Portuguese" },
   { code: "ar", label: "Arabic" },
+  { code: "hi", label: "Hindi" },
   { code: "th", label: "Thai" },
+  { code: "vi", label: "Vietnamese" },
+  { code: "ru", label: "Russian" },
+  { code: "tr", label: "Turkish" },
+  { code: "pl", label: "Polish" },
+  { code: "nl", label: "Dutch" },
+  { code: "sv", label: "Swedish" },
+  { code: "tl", label: "Tagalog" },
 ];
 
 export default function SettingsScreen() {
@@ -51,6 +61,17 @@ export default function SettingsScreen() {
     if (!userId) return;
     setLanguage(code);
     await upsertProfile(userId, { language: code });
+  }
+
+  async function handleUpgrade(plan) {
+    if (!userId) return;
+    const result = await upgradeToPremium();
+    if (result?.error) {
+      Alert.alert("Error", result.error.message || "Failed to upgrade. Please try again.");
+    } else {
+      setProfile((prev) => ({ ...prev, premium: true }));
+      Alert.alert("Upgraded!", `You are now a premium member (${plan} plan). Enjoy all features!`);
+    }
   }
 
   async function handleAddLocation() {
@@ -137,9 +158,18 @@ export default function SettingsScreen() {
         </View>
       )}
       {!profile?.premium && (
-        <Pressable style={styles.upgradeBtn}>
-          <Text style={styles.upgradeBtnText}>Upgrade to Premium — $9.99/mo</Text>
-        </Pressable>
+        <View>
+          <Text style={styles.section}>Premium Plans</Text>
+          <Pressable style={styles.upgradeBtn} onPress={() => handleUpgrade("Weekly")}>
+            <Text style={styles.upgradeBtnText}>Weekly — $9.99/week</Text>
+          </Pressable>
+          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#e11d48", marginTop: 8 }]} onPress={() => handleUpgrade("Monthly")}>
+            <Text style={styles.upgradeBtnText}>Monthly — $35.99/month</Text>
+          </Pressable>
+          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#7c3aed", marginTop: 8 }]} onPress={() => handleUpgrade("Yearly")}>
+            <Text style={styles.upgradeBtnText}>Yearly — $199.99/year (Save 54%)</Text>
+          </Pressable>
+        </View>
       )}
 
       <Pressable style={styles.logoutBtn} onPress={logout}>

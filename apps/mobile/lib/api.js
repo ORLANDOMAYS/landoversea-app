@@ -24,11 +24,15 @@ export async function getProfile(userId) {
 
 export async function upsertProfile(userId, fields) {
   if (!supabase) return null;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .upsert({ id: userId, ...fields })
     .select()
     .single();
+  if (error) {
+    console.error("upsertProfile error:", error.message);
+    return { error };
+  }
   return data;
 }
 
@@ -247,6 +251,18 @@ export async function removeUserLocation(locationId) {
   await supabase.from("user_locations").delete().eq("id", locationId);
 }
 
+/* ── Premium ──────────────────────────────────────────────────── */
+
+export async function upgradeToPremium() {
+  if (!supabase) return { error: { message: "Not connected" } };
+  const { error } = await supabase.rpc("upgrade_to_premium");
+  if (error) {
+    console.error("upgradeToPremium error:", error.message);
+    return { error };
+  }
+  return { success: true };
+}
+
 /* ── Verification ─────────────────────────────────────────────── */
 
 export async function verifyProfile(userId) {
@@ -255,4 +271,27 @@ export async function verifyProfile(userId) {
     user_uuid: userId,
   });
   return !error;
+}
+
+/* ── Coaches ──────────────────────────────────────────────────── */
+
+export async function getCoaches() {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("coaches")
+    .select("*")
+    .eq("active", true)
+    .order("rating", { ascending: false });
+  return data ?? [];
+}
+
+export async function getCoachById(coachId) {
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("coaches")
+    .select("*")
+    .eq("id", coachId)
+    .eq("active", true)
+    .single();
+  return data;
 }

@@ -2,7 +2,13 @@ import { Tabs } from "expo-router";
 import { Text } from "react-native";
 
 function TabIcon({ name, color }) {
-  const icons = { Discover: "♥", Matches: "💬", Profile: "👤", Settings: "⚙" };
+  const icons = {
+    Discover: "♥",
+    Matches: "💬",
+    Coaches: "🎓",
+    Profile: "👤",
+    Settings: "⚙",
+  };
   return <Text style={{ fontSize: 22, color }}>{icons[name] || "•"}</Text>;
 }
 
@@ -29,6 +35,13 @@ export default function TabsLayout() {
         options={{
           title: "Matches",
           tabBarIcon: ({ color }) => <TabIcon name="Matches" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="coaches"
+        options={{
+          title: "Coaches",
+          tabBarIcon: ({ color }) => <TabIcon name="Coaches" color={color} />,
         }}
       />
       <Tabs.Screen

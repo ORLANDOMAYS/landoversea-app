@@ -35,7 +35,7 @@ export default function ProfileScreen() {
   async function save() {
     if (!userId) return;
     setSaving(true);
-    await upsertProfile(userId, {
+    const result = await upsertProfile(userId, {
       display_name: name,
       bio,
       age: age ? parseInt(age) : null,
@@ -43,7 +43,11 @@ export default function ProfileScreen() {
       language,
     });
     setSaving(false);
-    Alert.alert("Saved", "Profile updated successfully!");
+    if (result?.error) {
+      Alert.alert("Error", result.error.message || "Failed to save profile. Please try again.");
+    } else {
+      Alert.alert("Saved", "Profile updated successfully!");
+    }
   }
 
   async function pickPhoto() {
