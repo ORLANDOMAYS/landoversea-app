@@ -24,11 +24,15 @@ export async function getProfile(userId) {
 
 export async function upsertProfile(userId, fields) {
   if (!supabase) return null;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .upsert({ id: userId, ...fields })
     .select()
     .single();
+  if (error) {
+    console.error("upsertProfile error:", error.message);
+    return { error };
+  }
   return data;
 }
 

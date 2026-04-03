@@ -62,6 +62,17 @@ export default function SettingsScreen() {
     await upsertProfile(userId, { language: code });
   }
 
+  async function handleUpgrade(plan) {
+    if (!userId) return;
+    const result = await upsertProfile(userId, { premium: true });
+    if (result?.error) {
+      Alert.alert("Error", result.error.message || "Failed to upgrade. Please try again.");
+    } else {
+      setProfile((prev) => ({ ...prev, premium: true }));
+      Alert.alert("Upgraded!", `You are now a premium member (${plan} plan). Enjoy all features!`);
+    }
+  }
+
   async function handleAddLocation() {
     if (!userId || !newCity || !newCountry) return;
     if (!profile?.premium) {
@@ -148,13 +159,13 @@ export default function SettingsScreen() {
       {!profile?.premium && (
         <View>
           <Text style={styles.section}>Premium Plans</Text>
-          <Pressable style={styles.upgradeBtn} onPress={() => Alert.alert("Coming Soon", "In-app purchases will be available soon.")}>
+          <Pressable style={styles.upgradeBtn} onPress={() => handleUpgrade("Weekly")}>
             <Text style={styles.upgradeBtnText}>Weekly — $9.99/week</Text>
           </Pressable>
-          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#e11d48", marginTop: 8 }]} onPress={() => Alert.alert("Coming Soon", "In-app purchases will be available soon.")}>
+          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#e11d48", marginTop: 8 }]} onPress={() => handleUpgrade("Monthly")}>
             <Text style={styles.upgradeBtnText}>Monthly — $35.99/month</Text>
           </Pressable>
-          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#7c3aed", marginTop: 8 }]} onPress={() => Alert.alert("Coming Soon", "In-app purchases will be available soon.")}>
+          <Pressable style={[styles.upgradeBtn, { backgroundColor: "#7c3aed", marginTop: 8 }]} onPress={() => handleUpgrade("Yearly")}>
             <Text style={styles.upgradeBtnText}>Yearly — $199.99/year (Save 54%)</Text>
           </Pressable>
         </View>
