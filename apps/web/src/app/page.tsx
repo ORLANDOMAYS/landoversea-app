@@ -20,7 +20,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-3 max-w-7xl mx-auto">
         <a href="https://www.landoversea.net/" target="_blank" rel="noopener noreferrer">
-          <img src="/logo.webp" alt="LandOverSea" className="h-16 md:h-20 w-auto" />
+          <img src="/logo-compact.svg" alt="LandOverSea" className="h-14 md:h-16 w-auto" />
         </a>
         <div className="flex items-center gap-4">
           <a
@@ -62,9 +62,9 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 text-center px-6 py-24 md:py-36 max-w-5xl mx-auto">
           <img
-            src="/logo.webp"
+            src="/logo-white.svg"
             alt="LandOverSea"
-            className="h-32 md:h-44 lg:h-52 w-auto mx-auto mb-8 drop-shadow-2xl"
+            className="h-36 md:h-48 lg:h-56 w-auto mx-auto mb-8 drop-shadow-2xl"
           />
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 drop-shadow-lg">
             Discover Connections<br />Beyond Borders
@@ -304,9 +304,9 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="text-center px-6 py-24 bg-white">
         <img
-          src="/logo.webp"
+          src="/logo.svg"
           alt="LandOverSea"
-          className="h-24 md:h-32 w-auto mx-auto mb-8"
+          className="h-28 md:h-36 w-auto mx-auto mb-8"
         />
         <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
           Ready to Find Your Match?
@@ -327,7 +327,7 @@ export default function LandingPage() {
       <footer className="bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-12">
           <div>
-            <img src="/logo.webp" alt="LandOverSea" className="h-20 w-auto mb-4" />
+            <img src="/logo-white.svg" alt="LandOverSea" className="h-24 w-auto mb-4" />
             <p className="text-pink-400 font-semibold text-lg mb-2">
               Discover Connections Beyond Borders
             </p>

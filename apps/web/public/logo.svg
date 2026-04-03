@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" fill="none">
+  <defs>
+    <linearGradient id="heartGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="60%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#f43f5e"/>
+    </linearGradient>
+    <linearGradient id="seaGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Heart shape behind text -->
+  <g transform="translate(200, 62)">
+    <path d="M0,30 C0,30 -48,-20 -48,-46 C-48,-67 -26,-78 0,-54 C26,-78 48,-67 48,-46 C48,-20 0,30 0,30 Z" 
+          fill="url(#heartGrad)" opacity="0.12"/>
+  </g>
+
+  <!-- "Land" in elegant italic serif -->
+  <text x="157" y="82" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-style="italic" font-weight="700" fill="url(#landGrad)" letter-spacing="-1">Land</text>
+  
+  <!-- "Over" in lighter weight sans-serif -->
+  <text x="132" y="128" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="38" font-weight="400" fill="#64748b" letter-spacing="1">Over</text>
+  
+  <!-- "SEA" in bold caps with blue gradient -->
+  <text x="228" y="128" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="38" font-weight="800" fill="url(#seaGrad)" letter-spacing="5">SEA</text>
+  
+  <!-- Accent wave line -->
+  <path d="M118,142 Q200,134 282,142" stroke="url(#lineGrad)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- Tagline -->
+  <text x="200" y="168" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="600" fill="#94a3b8" letter-spacing="3.2" text-anchor="middle">CONNECTING HEARTS ACROSS BORDERS</text>
+</svg>

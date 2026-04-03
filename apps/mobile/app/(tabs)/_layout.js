@@ -1,5 +1,17 @@
 import { Tabs } from "expo-router";
-import { Text } from "react-native";
+import { Text, Image, View } from "react-native";
+
+function HeaderLogo() {
+  return (
+    <View style={{ paddingLeft: 4 }}>
+      <Image
+        source={require("../../assets/logo-full.png")}
+        style={{ width: 120, height: 36 }}
+        resizeMode="contain"
+      />
+    </View>
+  );
+}
 
 function TabIcon({ name, color }) {
   const icons = {
@@ -21,6 +33,7 @@ export default function TabsLayout() {
         headerStyle: { backgroundColor: "#fff" },
         headerTintColor: "#e11d48",
         headerTitleStyle: { fontWeight: "700" },
+        headerLeft: () => <HeaderLogo />,
       }}
     >
       <Tabs.Screen

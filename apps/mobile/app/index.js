@@ -24,7 +24,7 @@ export default function LandingScreen() {
     return (
       <View style={styles.container}>
         <Image
-          source={require("../assets/logo.webp")}
+          source={require("../assets/logo-full.png")}
           style={styles.loadingLogo}
           resizeMode="contain"
         />
@@ -36,11 +36,11 @@ export default function LandingScreen() {
   return (
     <View style={styles.container}>
       <Image
-        source={require("../assets/logo.webp")}
+        source={require("../assets/logo-full.png")}
         style={styles.logo}
         resizeMode="contain"
       />
-      <Text style={styles.appName}>LandOverSea</Text>
+      <Text style={styles.appName}>CONNECTING HEARTS ACROSS BORDERS</Text>
       <Text style={styles.tagline}>
         Find love across borders.{"\n"}Real-time translation. Real connections.
       </Text>
@@ -82,10 +82,10 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: "#fff",
   },
-  loadingLogo: { width: 80, height: 80, marginBottom: 16 },
+  loadingLogo: { width: 160, height: 80, marginBottom: 16 },
   loading: { fontSize: 16, color: "#666" },
-  logo: { width: width * 0.4, height: width * 0.4, marginBottom: 8 },
-  appName: { fontSize: 32, fontWeight: "800", color: "#e11d48", marginBottom: 8 },
+  logo: { width: width * 0.65, height: width * 0.35, marginBottom: 16 },
+  appName: { fontSize: 14, fontWeight: "600", color: "#94a3b8", marginBottom: 8, letterSpacing: 3, textTransform: "uppercase" },
   tagline: {
     fontSize: 16,
     color: "#666",
