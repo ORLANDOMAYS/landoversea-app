@@ -6,6 +6,7 @@ import {
   getCurrentUser,
   getProfile,
   upsertProfile,
+  upgradeToPremium,
   getUserLocations,
   addUserLocation,
   removeUserLocation,
@@ -64,7 +65,7 @@ export default function SettingsScreen() {
 
   async function handleUpgrade(plan) {
     if (!userId) return;
-    const result = await upsertProfile(userId, { premium: true });
+    const result = await upgradeToPremium();
     if (result?.error) {
       Alert.alert("Error", result.error.message || "Failed to upgrade. Please try again.");
     } else {

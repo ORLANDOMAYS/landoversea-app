@@ -251,6 +251,18 @@ export async function removeUserLocation(locationId) {
   await supabase.from("user_locations").delete().eq("id", locationId);
 }
 
+/* ── Premium ──────────────────────────────────────────────────── */
+
+export async function upgradeToPremium() {
+  if (!supabase) return { error: { message: "Not connected" } };
+  const { error } = await supabase.rpc("upgrade_to_premium");
+  if (error) {
+    console.error("upgradeToPremium error:", error.message);
+    return { error };
+  }
+  return { success: true };
+}
+
 /* ── Verification ─────────────────────────────────────────────── */
 
 export async function verifyProfile(userId) {
