@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { MessageCircle, User, Settings, Flame } from "lucide-react";
+import { MessageCircle, User, Settings, Flame, GraduationCap } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 const NAV_ITEMS = [
   { href: "/app", icon: Flame, label: "Discover" },
   { href: "/app/matches", icon: MessageCircle, label: "Matches" },
+  { href: "/app/coaches", icon: GraduationCap, label: "Coaches" },
   { href: "/app/profile", icon: User, label: "Profile" },
   { href: "/app/settings", icon: Settings, label: "Settings" },
 ];

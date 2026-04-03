@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Globe, Shield, MapPin, MessageCircle, ArrowRight, Heart, Users, Lock, Smartphone } from "lucide-react";
+import { Globe, Shield, MapPin, MessageCircle, ArrowRight, Heart, Users, Lock, Smartphone, Crown, Star, Video, GraduationCap, Zap } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function LandingPage() {
@@ -261,6 +261,117 @@ export default function LandingPage() {
             <p className="text-gray-500 leading-relaxed">{f.desc}</p>
           </div>
         ))}
+      </section>
+
+      {/* Premium Section */}
+      <section className="bg-gradient-to-br from-amber-50 via-white to-rose-50 py-20">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <Crown className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
+              Premium Membership
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Unlock unlimited swipes, super likes, profile boosts, and more.
+              Find your match faster with premium features.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            {[
+              { name: "Weekly", price: "$9.99", period: "/week", popular: false },
+              { name: "Monthly", price: "$35.99", period: "/month", popular: true },
+              { name: "Yearly", price: "$199.99", period: "/year", popular: false },
+            ].map((plan) => (
+              <div
+                key={plan.name}
+                className={`rounded-2xl p-6 text-center ${
+                  plan.popular
+                    ? "bg-gradient-to-br from-amber-500 to-rose-500 text-white shadow-xl scale-105"
+                    : "bg-white border border-gray-200 shadow-md"
+                }`}
+              >
+                {plan.popular && (
+                  <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full font-medium">
+                    MOST POPULAR
+                  </span>
+                )}
+                <h3 className={`text-xl font-bold mt-3 ${plan.popular ? "text-white" : "text-gray-900"}`}>
+                  {plan.name}
+                </h3>
+                <div className="mt-2">
+                  <span className={`text-4xl font-extrabold ${plan.popular ? "text-white" : "text-gray-900"}`}>
+                    {plan.price}
+                  </span>
+                  <span className={plan.popular ? "text-white/80" : "text-gray-500"}>
+                    {plan.period}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            {[
+              { icon: Zap, text: "Unlimited Swipes" },
+              { icon: Star, text: "Super Likes" },
+              { icon: Video, text: "Video Chat" },
+              { icon: MapPin, text: "3 Locations" },
+            ].map((f) => (
+              <div key={f.text} className="flex items-center gap-2 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
+                <f.icon className="w-5 h-5 text-amber-500" />
+                <span className="text-sm font-medium text-gray-700">{f.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Dating Coaches Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center gap-12">
+            <div className="flex-1">
+              <div className="w-14 h-14 bg-pink-100 rounded-2xl flex items-center justify-center mb-5">
+                <GraduationCap className="w-7 h-7 text-pink-600" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
+                Expert Dating Coaches
+              </h2>
+              <p className="text-gray-600 text-lg leading-relaxed mb-6">
+                Get personalized help from verified dating experts. Profile
+                optimization, conversation skills, first date coaching, and
+                more. Our coaches help you put your best foot forward.
+              </p>
+              <div className="space-y-3 mb-6">
+                {[
+                  "AI-powered profile & bio optimization",
+                  "Psychology-based conversation openers",
+                  "Real-time voice & video coaching",
+                  "Success tracking & analytics",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2 text-gray-700">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <Star className="w-3 h-3 text-green-600" />
+                    </div>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => router.push("/auth")}
+                className="inline-flex items-center gap-2 px-8 py-3 bg-pink-600 text-white rounded-full font-semibold hover:bg-pink-700 transition shadow-md"
+              >
+                Find a Coach <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="w-72 h-96 bg-gradient-to-br from-pink-100 to-amber-50 rounded-3xl shadow-xl flex items-center justify-center">
+                <GraduationCap className="w-20 h-20 text-pink-400" />
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Testimonials */}

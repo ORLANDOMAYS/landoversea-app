@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Send, Globe } from "lucide-react";
+import { ArrowLeft, Send, Globe, Video } from "lucide-react";
 import {
   getCurrentUser,
   getMessages,
@@ -10,6 +10,7 @@ import {
   subscribeToMessages,
   getProfile,
   getMatches,
+  initiateVideoCall,
 } from "../../../lib/api";
 import { translateText } from "../../../lib/translate";
 import type { Message, Profile, MatchWithProfile } from "../../../lib/types";
@@ -133,6 +134,21 @@ function ChatContent() {
             </p>
           )}
         </div>
+        {/* Video Call Button */}
+        {matchId && userId && otherProfile && (
+          <button
+            onClick={async () => {
+              const call = await initiateVideoCall(matchId, userId, otherProfile.id);
+              if (call) {
+                window.open(`/video-call?callId=${call.id}&matchId=${matchId}`, "_blank");
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white hover:bg-green-600 transition"
+            title="Start video call"
+          >
+            <Video className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Messages */}
