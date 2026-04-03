@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, FlatList, Pressable, Image, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useRouter, useFocusEffect } from "expo-router";
 import { getCurrentUser, getMatches } from "../../lib/api";
 
 export default function MatchesScreen() {
