@@ -25,6 +25,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "orlandomays@gmail.com",
+        "ascAppId": "6761584342",
+        "appleTeamId": "D3MK84K5S5"
+      }
+    }
   }
 }
