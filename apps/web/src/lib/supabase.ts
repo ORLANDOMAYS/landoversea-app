@@ -12,7 +12,13 @@ export function getSupabase(): SupabaseClient {
   if (!url || !key) {
     throw new Error(supabaseConfigurationError);
   }
-  _supabase = createClient(url, key);
+  _supabase = createClient(url, key, {
+    auth: {
+      detectSessionInUrl: false,
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
   return _supabase;
 }
 
