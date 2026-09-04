@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, X, Star, MapPin, Shield } from "lucide-react";
+import { Heart, X, Star, MapPin, Shield, SlidersHorizontal } from "lucide-react";
 import { getCurrentUser, getDiscoverProfiles, recordSwipe, checkNewMatch } from "../../lib/api";
 import type { ProfileWithPhotos } from "../../lib/types";
+import { nextSwipeState } from "../../lib/dating-state";
 
 export default function SwipePage() {
   const [profiles, setProfiles] = useState<ProfileWithPhotos[]>([]);
@@ -13,42 +14,61 @@ export default function SwipePage() {
   const [loading, setLoading] = useState(true);
   const [matchPopup, setMatchPopup] = useState<string | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({ minAge: "18", maxAge: "120", gender: "", location: "" });
+  const [appliedFilters, setAppliedFilters] = useState(filters);
 
-  useEffect(() => {
-    getCurrentUser().then((user) => {
+  const loadProfiles = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const user = await getCurrentUser();
       if (user) {
         setUserId(user.id);
-        getDiscoverProfiles(user.id).then((p) => {
-          setProfiles(p);
-          setLoading(false);
+        const p = await getDiscoverProfiles(user.id, {
+          minAge: appliedFilters.minAge ? Number(appliedFilters.minAge) : undefined,
+          maxAge: appliedFilters.maxAge ? Number(appliedFilters.maxAge) : undefined,
+          gender: appliedFilters.gender || undefined,
+          location: appliedFilters.location || undefined,
         });
+        setProfiles(p);
+        setCurrentIndex(0);
+      } else {
+        setError("Please sign in to discover people.");
       }
-    });
-  }, []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load profiles.");
+    } finally {
+      setLoading(false);
+    }
+  }, [appliedFilters]);
+
+  useEffect(() => { void loadProfiles(); }, [loadProfiles]);
 
   const handleSwipe = useCallback(
     async (direction: "like" | "pass" | "superlike") => {
       if (!userId || currentIndex >= profiles.length || swipeDirection !== null) return;
       const profile = profiles[currentIndex];
 
-      setSwipeDirection(direction === "pass" ? "left" : "right");
-
-      setTimeout(async () => {
-        try {
-          await recordSwipe(userId, profile.id, direction);
-
-          if (direction !== "pass") {
-            const match = await checkNewMatch(userId, profile.id);
-            if (match) {
-              setMatchPopup(profile.display_name ?? "Someone");
-              setTimeout(() => setMatchPopup(null), 3000);
-            }
+      setError(null);
+      try {
+        await recordSwipe(userId, profile.id, direction);
+        if (direction !== "pass") {
+          const match = await checkNewMatch(userId, profile.id);
+          if (match) {
+            setMatchPopup(profile.display_name ?? "Someone");
+            setTimeout(() => setMatchPopup(null), 3000);
           }
-        } finally {
-          setSwipeDirection(null);
-          setCurrentIndex((prev) => prev + 1);
         }
-      }, 300);
+        setSwipeDirection(direction === "pass" ? "left" : "right");
+        setTimeout(() => {
+          setSwipeDirection(null);
+          setCurrentIndex((prev) => nextSwipeState(prev, true));
+        }, 300);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Swipe could not be saved. Please retry.");
+      }
     },
     [userId, currentIndex, profiles, swipeDirection]
   );
@@ -66,15 +86,27 @@ export default function SwipePage() {
     );
   }
 
+  if (error && !currentProfile) {
+    return (
+      <div className="flex items-center justify-center h-[70vh]">
+        <div className="text-center px-6" role="alert">
+          <p className="text-red-700 mb-4">{error}</p>
+          <button onClick={() => void loadProfiles()} className="rounded-xl bg-rose-600 px-4 py-2 text-white">Retry</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentProfile) {
     return (
       <div className="flex items-center justify-center h-[70vh]">
         <div className="text-center px-6">
           <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-700 mb-2">No More Profiles</h2>
-          <p className="text-gray-500">
+          <p className="text-gray-500 mb-4">
             {"You've seen everyone nearby. Check back later for new people!"}
           </p>
+          <button onClick={() => void loadProfiles()} className="rounded-xl border border-rose-600 px-4 py-2 text-rose-600">Refresh</button>
         </div>
       </div>
     );
@@ -87,6 +119,22 @@ export default function SwipePage() {
 
   return (
     <div className="flex flex-col items-center px-4 py-4 max-w-md mx-auto">
+      <div className="w-full mb-3">
+        <button aria-expanded={filtersOpen} aria-controls="discover-filters" onClick={() => setFiltersOpen((open) => !open)} className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm">
+          <SlidersHorizontal className="h-4 w-4" /> Filters
+        </button>
+        {filtersOpen && (
+          <div id="discover-filters" className="mt-2 grid grid-cols-2 gap-2 rounded-xl border bg-white p-3">
+            <label className="text-xs">Minimum age<input aria-label="Minimum age" type="number" min="18" max="120" value={filters.minAge} onChange={(e) => setFilters({ ...filters, minAge: e.target.value })} className="mt-1 w-full rounded border p-2" /></label>
+            <label className="text-xs">Maximum age<input aria-label="Maximum age" type="number" min="18" max="120" value={filters.maxAge} onChange={(e) => setFilters({ ...filters, maxAge: e.target.value })} className="mt-1 w-full rounded border p-2" /></label>
+            <label className="text-xs">Gender<select aria-label="Gender filter" value={filters.gender} onChange={(e) => setFilters({ ...filters, gender: e.target.value })} className="mt-1 w-full rounded border p-2"><option value="">Everyone</option><option value="male">Men</option><option value="female">Women</option><option value="non-binary">Non-binary</option><option value="other">Other</option></select></label>
+            <label className="text-xs">Location<input aria-label="Location filter" value={filters.location} onChange={(e) => setFilters({ ...filters, location: e.target.value })} className="mt-1 w-full rounded border p-2" placeholder="City or country" /></label>
+            <button onClick={() => { const reset = { minAge: "18", maxAge: "120", gender: "", location: "" }; setFilters(reset); setAppliedFilters(reset); }} className="rounded border p-2 text-sm">Reset filters</button>
+            <button onClick={() => { setFiltersOpen(false); setAppliedFilters(filters); }} className="rounded bg-rose-600 p-2 text-sm text-white">Apply filters</button>
+          </div>
+        )}
+      </div>
+      {error && <p role="alert" className="w-full mb-2 text-sm text-red-700">{error} Retry the action.</p>}
       {/* Match Popup */}
       <AnimatePresence>
         {matchPopup && (
@@ -157,6 +205,7 @@ export default function SwipePage() {
       {/* Action buttons */}
       <div className="flex items-center gap-6 mt-6">
         <button
+          aria-label="Pass on this profile"
           onClick={() => handleSwipe("pass")}
           disabled={swipeDirection !== null}
           className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center border border-gray-200 hover:scale-110 transition disabled:opacity-50"
@@ -164,6 +213,7 @@ export default function SwipePage() {
           <X className="w-7 h-7 text-gray-500" />
         </button>
         <button
+          aria-label="Super like this profile"
           onClick={() => handleSwipe("superlike")}
           disabled={swipeDirection !== null}
           className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center border border-gray-200 hover:scale-110 transition disabled:opacity-50"
@@ -171,6 +221,7 @@ export default function SwipePage() {
           <Star className="w-6 h-6 text-amber-500" fill="currentColor" />
         </button>
         <button
+          aria-label="Like this profile"
           onClick={() => handleSwipe("like")}
           disabled={swipeDirection !== null}
           className="w-14 h-14 rounded-full bg-rose-600 shadow-lg flex items-center justify-center hover:scale-110 transition disabled:opacity-50"

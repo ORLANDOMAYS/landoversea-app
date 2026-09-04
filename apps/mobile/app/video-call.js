@@ -3,10 +3,15 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 export default function VideoCallScreen() {
-  const { matchId } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const matchId = typeof params.matchId === "string" && params.matchId.trim() ? params.matchId : null;
   const router = useRouter();
   const [muted, setMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
+
+  if (!matchId) {
+    return <View style={styles.container}><View style={styles.remoteVideo}><Text accessibilityRole="alert" style={styles.waitingText}>No valid match was selected.</Text><Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()}><Text style={styles.backText}>Go back</Text></Pressable></View></View>;
+  }
 
   return (
     <View style={styles.container}>
@@ -22,6 +27,8 @@ export default function VideoCallScreen() {
         <Pressable
           style={[styles.controlBtn, muted && styles.controlBtnActive]}
           onPress={() => setMuted(!muted)}
+          accessibilityRole="button"
+          accessibilityLabel={muted ? "Unmute microphone" : "Mute microphone"}
         >
           <Text style={styles.controlIcon}>{muted ? "🔇" : "🎤"}</Text>
           <Text style={styles.controlLabel}>{muted ? "Unmute" : "Mute"}</Text>
@@ -30,6 +37,8 @@ export default function VideoCallScreen() {
         <Pressable
           style={[styles.controlBtn, styles.endCallBtn]}
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="End call"
         >
           <Text style={[styles.controlIcon, { fontSize: 28 }]}>📞</Text>
           <Text style={[styles.controlLabel, { color: "#fff" }]}>End</Text>
@@ -38,6 +47,8 @@ export default function VideoCallScreen() {
         <Pressable
           style={[styles.controlBtn, videoOff && styles.controlBtnActive]}
           onPress={() => setVideoOff(!videoOff)}
+          accessibilityRole="button"
+          accessibilityLabel={videoOff ? "Turn video on" : "Turn video off"}
         >
           <Text style={styles.controlIcon}>{videoOff ? "📷" : "🎥"}</Text>
           <Text style={styles.controlLabel}>{videoOff ? "Video On" : "Video Off"}</Text>
@@ -56,6 +67,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#222",
   },
   waitingText: { color: "#888", fontSize: 16 },
+  backText: { color: "#fff", fontSize: 16, marginTop: 16, textDecorationLine: "underline" },
   localVideo: {
     position: "absolute",
     top: 60,

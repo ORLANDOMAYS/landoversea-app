@@ -104,7 +104,9 @@ export default function SettingsPage() {
         <p className="text-sm text-gray-500 mb-3">
           Messages you send will be translated from this language.
         </p>
+        <label htmlFor="settings-language" className="sr-only">Translation language</label>
         <select
+          id="settings-language"
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
           className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
@@ -171,6 +173,7 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => handleRemoveLocation(loc.id)}
+                    aria-label={`Remove ${loc.city}, ${loc.country}`}
                     className="text-gray-400 hover:text-red-500 transition"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -183,12 +186,14 @@ export default function SettingsPage() {
             {locations.length < 3 && (
               <div className="flex gap-2">
                 <input
+                  aria-label="New location city"
                   value={newCity}
                   onChange={(e) => setNewCity(e.target.value)}
                   placeholder="City"
                   className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
                 />
                 <input
+                  aria-label="New location country"
                   value={newCountry}
                   onChange={(e) => setNewCountry(e.target.value)}
                   placeholder="Country"
@@ -196,6 +201,7 @@ export default function SettingsPage() {
                 />
                 <button
                   onClick={handleAddLocation}
+                  aria-label="Add location"
                   className="px-3 py-2 bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition"
                 >
                   <Plus className="w-4 h-4" />

@@ -97,6 +97,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <button
               key={item.href}
               onClick={() => router.push(item.href)}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${
                 isActive ? "text-pink-600" : "text-gray-400 hover:text-gray-600"
               }`}

@@ -21,6 +21,8 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState<string | "upload" | null>(null);
+  const [status, setStatus] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
 
   const [displayName, setDisplayName] = useState("");
@@ -34,16 +36,16 @@ export default function ProfilePage() {
   const [verified, setVerified] = useState(false);
 
   useEffect(() => {
-    getCurrentUser().then(async (user) => {
-      if (!user) return;
-      setUserId(user.id);
-
-      const [profile, userPhotos] = await Promise.all([
-        getProfile(user.id),
-        getPhotos(user.id),
-      ]);
-
-      if (profile) {
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          setStatus({ kind: "error", message: "Please sign in to edit your profile." });
+          return;
+        }
+        setUserId(user.id);
+        const [profile, userPhotos] = await Promise.all([getProfile(user.id), getPhotos(user.id)]);
+        if (profile) {
         setDisplayName(profile.display_name ?? "");
         setBio(profile.bio ?? "");
         setAge(profile.age?.toString() ?? "");
@@ -53,45 +55,70 @@ export default function ProfilePage() {
         setCity(profile.city ?? "");
         setCountry(profile.country ?? "");
         setVerified(profile.verified);
+        }
+        setPhotos(userPhotos);
+      } catch (error) {
+        setStatus({ kind: "error", message: error instanceof Error ? error.message : "Unable to load profile." });
+      } finally {
+        setLoading(false);
       }
-
-      setPhotos(userPhotos);
-      setLoading(false);
-    });
+    })();
   }, []);
 
   async function handleSave() {
     if (!userId) return;
     setSaving(true);
-
-    const saved = await upsertProfile(userId, {
-      display_name: displayName || null,
-      bio: bio || null,
-      age: age ? parseInt(age) : null,
-      gender: gender || null,
-      interested_in: interestedIn || null,
-      language,
-      city: city || null,
-      country: country || null,
-    } as Partial<Profile>);
-
-    setSaving(false);
-    if (saved) {
+    setStatus(null);
+    try {
+      await upsertProfile(userId, {
+        display_name: displayName || null,
+        bio: bio || null,
+        age: age ? parseInt(age, 10) : null,
+        gender: gender || null,
+        interested_in: interestedIn || null,
+        language,
+        city: city || null,
+        country: country || null,
+      } as Partial<Profile>);
+      setStatus({ kind: "success", message: "Profile saved." });
       const { destination, error } = await getAuthDestination();
       if (!error && destination === "/app") router.replace(destination);
+    } catch (error) {
+      setStatus({ kind: "error", message: error instanceof Error ? error.message : "Unable to save profile. Please try again." });
+    } finally {
+      setSaving(false);
     }
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!userId || !e.target.files?.[0]) return;
+    if (!userId || !e.target.files?.[0] || photos.length >= 6) return;
     const file = e.target.files[0];
-    const photo = await uploadPhoto(userId, file, photos.length);
-    if (photo) setPhotos((prev) => [...prev, photo]);
+    setPhotoBusy("upload");
+    setStatus(null);
+    try {
+      const photo = await uploadPhoto(userId, file, photos.length);
+      if (photo) setPhotos((prev) => prev.length < 6 ? [...prev, photo] : prev);
+      setStatus({ kind: "success", message: "Photo uploaded." });
+    } catch (error) {
+      setStatus({ kind: "error", message: error instanceof Error ? error.message : "Unable to upload photo." });
+    } finally {
+      setPhotoBusy(null);
+      e.target.value = "";
+    }
   }
 
   async function handleDeletePhoto(photoId: string) {
-    await deletePhoto(photoId);
-    setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    setPhotoBusy(photoId);
+    setStatus(null);
+    try {
+      await deletePhoto(photoId);
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+      setStatus({ kind: "success", message: "Photo deleted." });
+    } catch (error) {
+      setStatus({ kind: "error", message: error instanceof Error ? error.message : "Unable to delete photo." });
+    } finally {
+      setPhotoBusy(null);
+    }
   }
 
   if (loading) {
@@ -112,16 +139,23 @@ export default function ProfilePage() {
           </span>
         )}
       </div>
+      {status && (
+        <div role={status.kind === "error" ? "alert" : "status"} className={`mb-4 rounded-lg p-3 text-sm ${status.kind === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+          {status.message}
+        </div>
+      )}
 
       {/* Photos */}
       <div className="mb-6">
-        <label className="text-sm font-medium text-gray-700 mb-2 block">Photos</label>
+        <p className="text-sm font-medium text-gray-700 mb-2">Photos</p>
         <div className="grid grid-cols-3 gap-2">
           {photos.map((photo) => (
             <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
               <img src={photo.url} alt="Profile" className="w-full h-full object-cover" />
               <button
                 onClick={() => handleDeletePhoto(photo.id)}
+                disabled={photoBusy !== null}
+                aria-label="Delete profile photo"
                 className="absolute top-1 right-1 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
               >
                 <Trash2 className="w-3.5 h-3.5 text-white" />
@@ -131,6 +165,8 @@ export default function ProfilePage() {
           {photos.length < 6 && (
             <button
               onClick={() => fileRef.current?.click()}
+              disabled={photoBusy !== null}
+              aria-label="Add profile photo"
               className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-rose-400 hover:text-rose-500 transition"
             >
               <Plus className="w-6 h-6" />
@@ -144,6 +180,7 @@ export default function ProfilePage() {
           accept="image/*"
           className="hidden"
           onChange={handlePhotoUpload}
+          aria-label="Choose profile photo"
         />
       </div>
 
@@ -160,8 +197,9 @@ export default function ProfilePage() {
       {/* Form */}
       <div className="space-y-4">
         <div>
-          <label className="text-sm font-medium text-gray-700">Display Name</label>
+          <label htmlFor="display-name" className="text-sm font-medium text-gray-700">Display Name</label>
           <input
+            id="display-name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
@@ -170,8 +208,9 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Bio</label>
+          <label htmlFor="bio" className="text-sm font-medium text-gray-700">Bio</label>
           <textarea
+            id="bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}
@@ -182,8 +221,9 @@ export default function ProfilePage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">Age</label>
+            <label htmlFor="age" className="text-sm font-medium text-gray-700">Age</label>
             <input
+              id="age"
               type="number"
               value={age}
               onChange={(e) => setAge(e.target.value)}
@@ -195,8 +235,9 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-gray-700">Gender</label>
+            <label htmlFor="gender" className="text-sm font-medium text-gray-700">Gender</label>
             <select
+              id="gender"
               value={gender}
               onChange={(e) => setGender(e.target.value)}
               className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
@@ -211,8 +252,9 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Interested In</label>
+          <label htmlFor="interested-in" className="text-sm font-medium text-gray-700">Interested In</label>
           <select
+            id="interested-in"
             value={interestedIn}
             onChange={(e) => setInterestedIn(e.target.value)}
             className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
@@ -225,8 +267,9 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-700">Language</label>
+          <label htmlFor="language" className="text-sm font-medium text-gray-700">Language</label>
           <select
+            id="language"
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
             className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white"
@@ -241,8 +284,9 @@ export default function ProfilePage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">City</label>
+            <label htmlFor="city" className="text-sm font-medium text-gray-700">City</label>
             <input
+              id="city"
               value={city}
               onChange={(e) => setCity(e.target.value)}
               className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
@@ -250,8 +294,9 @@ export default function ProfilePage() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Country</label>
+            <label htmlFor="country" className="text-sm font-medium text-gray-700">Country</label>
             <input
+              id="country"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500"
