@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, ArrowLeft } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { supabase, supabaseConfigurationError } from "../../lib/supabase";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -13,11 +13,23 @@ export default function AuthPage() {
 
   async function sendLink() {
     if (!email || sending) return;
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setStatus(supabaseConfigurationError);
+      return;
+    }
     setSending(true);
     setStatus("Sending...");
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    setSending(false);
-    setStatus(error ? error.message : "Check your email for the login link!");
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+      setStatus(error ? error.message : "Check your email for the login link!");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to send a login link.");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (

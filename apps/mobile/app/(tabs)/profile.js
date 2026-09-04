@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Image 
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { getCurrentUser, getProfile, upsertProfile, getPhotos, uploadPhoto } from "../../lib/api";
+import { getAuthDestination } from "../../lib/auth-gate";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -47,6 +48,8 @@ export default function ProfileScreen() {
       Alert.alert("Error", result.error.message || "Failed to save profile. Please try again.");
     } else {
       Alert.alert("Saved", "Profile updated successfully!");
+      const { destination } = await getAuthDestination();
+      if (destination === "/(tabs)/discover") router.replace(destination);
     }
   }
 

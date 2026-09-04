@@ -1,5 +1,7 @@
-import { Tabs } from "expo-router";
-import { Text } from "react-native";
+import { useEffect, useState } from "react";
+import { Tabs, usePathname, useRouter } from "expo-router";
+import { ActivityIndicator, Text, View } from "react-native";
+import { getAuthDestination } from "../../lib/auth-gate";
 
 function TabIcon({ name, color }) {
   const icons = {
@@ -13,6 +15,34 @@ function TabIcon({ name, color }) {
 }
 
 export default function TabsLayout() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getAuthDestination().then(({ destination }) => {
+      if (!active) return;
+      if (destination === "/") router.replace("/");
+      else if (
+        destination === "/(tabs)/profile" &&
+        pathname !== "/profile"
+      ) router.replace(destination);
+      setReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [pathname, router]);
+
+  if (!ready) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color="#e11d48" />
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{

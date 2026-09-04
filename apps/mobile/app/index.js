@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Image, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
-import { supabase } from "../lib/supabase";
+import * as Linking from "expo-linking";
+import { getAuthDestination } from "../lib/auth-gate";
+import { parseAuthCallbackUrl } from "../lib/auth-flow";
 
 const { width } = Dimensions.get("window");
 
@@ -10,15 +12,13 @@ export default function LandingScreen() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!supabase) {
-      setChecking(false);
-      return;
-    }
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace("/(tabs)/discover");
+    Linking.getInitialURL().then(async (url) => {
+      if (url && parseAuthCallbackUrl(url).kind !== "invalid") return;
+      const { destination } = await getAuthDestination();
+      if (destination !== "/") router.replace(destination);
       else setChecking(false);
     });
-  }, []);
+  }, [router]);
 
   if (checking) {
     return (

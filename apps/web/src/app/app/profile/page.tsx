@@ -13,6 +13,7 @@ import {
 } from "../../../lib/api";
 import { LANGUAGES } from "../../../lib/types";
 import type { Profile, Photo } from "../../../lib/types";
+import { getAuthDestination } from "../../../lib/auth-gate";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function ProfilePage() {
     if (!userId) return;
     setSaving(true);
 
-    await upsertProfile(userId, {
+    const saved = await upsertProfile(userId, {
       display_name: displayName || null,
       bio: bio || null,
       age: age ? parseInt(age) : null,
@@ -75,6 +76,10 @@ export default function ProfilePage() {
     } as Partial<Profile>);
 
     setSaving(false);
+    if (saved) {
+      const { destination, error } = await getAuthDestination();
+      if (!error && destination === "/app") router.replace(destination);
+    }
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {

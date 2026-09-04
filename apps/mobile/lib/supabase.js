@@ -4,7 +4,10 @@ import { createClient } from "@supabase/supabase-js";
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
 const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
 
-export const supabase = url
+export const supabaseConfigurationError =
+  "Authentication is unavailable because Supabase is not configured.";
+
+export const supabase = url && key
   ? createClient(url, key, {
       auth: {
         storage: AsyncStorage,

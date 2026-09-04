@@ -10,9 +10,16 @@ export default function LandingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setLoggedIn(true);
-    });
+    try {
+      supabase.auth
+        .getUser()
+        .then(({ data: { user } }) => {
+          if (user) setLoggedIn(true);
+        })
+        .catch(() => setLoggedIn(false));
+    } catch {
+      setLoggedIn(false);
+    }
   }, []);
 
   return (
