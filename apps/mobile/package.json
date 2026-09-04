@@ -13,7 +13,11 @@
     "build:ios": "eas build --profile production --platform ios",
     "submit:android": "eas submit --platform android",
     "submit:ios": "eas submit --platform ios",
-    "test": "node --test ../../tests/auth-flow.test.cjs"
+    "test": "node --test ../../tests/*.test.cjs",
+    "check:deps": "CI=1 expo install --check",
+    "doctor": "pnpm dlx expo-doctor@1.17.11",
+    "check:config": "expo config --type public > /dev/null",
+    "export:web": "expo export --platform web --output-dir dist"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.23.1",

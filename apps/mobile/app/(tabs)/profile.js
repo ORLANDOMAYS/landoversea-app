@@ -188,10 +188,6 @@ export default function ProfileScreen() {
         <Text style={styles.saveBtnText}>{saving ? "Saving..." : "Save Profile"}</Text>
       </Pressable>
 
-      <Pressable accessibilityRole="button" accessibilityLabel="Verify profile" style={styles.verifyBtn} onPress={() => router.push("/verify")}>
-        <Text style={styles.verifyBtnText}>Verify Profile</Text>
-      </Pressable>
-
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -226,6 +222,4 @@ const styles = StyleSheet.create({
   genderTextActive: { color: "#e11d48", fontWeight: "600" },
   saveBtn: { backgroundColor: "#e11d48", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 24 },
   saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  verifyBtn: { borderWidth: 1, borderColor: "#e11d48", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 12 },
-  verifyBtnText: { color: "#e11d48", fontSize: 16, fontWeight: "700" },
 });

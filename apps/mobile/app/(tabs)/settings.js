@@ -41,25 +41,39 @@ export default function SettingsScreen() {
   const [locations, setLocations] = useState([]);
   const [newCity, setNewCity] = useState("");
   const [newCountry, setNewCountry] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    getCurrentUser().then((user) => {
-      if (!user) return;
-      setUserId(user.id);
-      getProfile(user.id).then((p) => {
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) throw new Error("Please sign in to view settings.");
+        setUserId(user.id);
+        const [p, loadedLocations] = await Promise.all([getProfile(user.id), getUserLocations(user.id)]);
         if (p) {
           setProfile(p);
           setLanguage(p.language || "en");
         }
-      });
-      getUserLocations(user.id).then(setLocations);
-    });
+        setLocations(loadedLocations);
+      } catch (err) {
+        setError(err?.message || "Unable to load settings.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   async function saveLang(code) {
     if (!userId) return;
     setLanguage(code);
-    await upsertProfile(userId, { language: code });
+    try {
+      await upsertProfile(userId, { language: code });
+    } catch (err) {
+      setLanguage(profile?.language || "en");
+      Alert.alert("Unable to save", err?.message || "Language could not be saved.");
+    }
   }
 
   async function handleAddLocation() {
@@ -72,17 +86,31 @@ export default function SettingsScreen() {
       Alert.alert("Limit Reached", "You can have up to 3 locations.");
       return;
     }
-    const loc = await addUserLocation(userId, newCity, newCountry);
-    if (loc) {
-      setLocations((prev) => [...prev, loc]);
-      setNewCity("");
-      setNewCountry("");
+    setBusy(true);
+    try {
+      const loc = await addUserLocation(userId, newCity.trim(), newCountry.trim());
+      if (loc) {
+        setLocations((prev) => [...prev, loc]);
+        setNewCity("");
+        setNewCountry("");
+      }
+    } catch (err) {
+      Alert.alert("Unable to add location", err?.message || "Please try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function handleRemoveLocation(id) {
-    await removeUserLocation(id);
-    setLocations((prev) => prev.filter((l) => l.id !== id));
+    setBusy(true);
+    try {
+      await removeUserLocation(id);
+      setLocations((prev) => prev.filter((l) => l.id !== id));
+    } catch (err) {
+      Alert.alert("Unable to remove location", err?.message || "Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function logout() {
@@ -90,10 +118,14 @@ export default function SettingsScreen() {
     router.replace("/");
   }
 
-  if (!userId) {
+  if (loading) {
+    return <View style={styles.center}><Text style={styles.emptyText}>Loading settings…</Text></View>;
+  }
+
+  if (error || !userId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyText}>Please log in</Text>
+        <Text accessibilityRole="alert" style={styles.errorText}>{error || "Please log in"}</Text>
       </View>
     );
   }
@@ -107,6 +139,9 @@ export default function SettingsScreen() {
             key={l.code}
             style={[styles.langBtn, language === l.code && styles.langActive]}
             onPress={() => saveLang(l.code)}
+            accessibilityRole="radio"
+            accessibilityLabel={`Language ${l.label}`}
+            accessibilityState={{ selected: language === l.code }}
           >
             <Text style={[styles.langText, language === l.code && styles.langTextActive]}>
               {l.label}
@@ -121,7 +156,7 @@ export default function SettingsScreen() {
           <Text style={styles.locText}>
             📍 {loc.city}, {loc.country}
           </Text>
-          <Pressable onPress={() => handleRemoveLocation(loc.id)}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${loc.city}, ${loc.country}`} disabled={busy} onPress={() => handleRemoveLocation(loc.id)}>
             <Text style={styles.removeText}>Remove</Text>
           </Pressable>
         </View>
@@ -133,14 +168,16 @@ export default function SettingsScreen() {
             value={newCity}
             onChangeText={setNewCity}
             placeholder="City"
+            accessibilityLabel="New location city"
           />
           <TextInput
             style={[styles.input, { flex: 1 }]}
             value={newCountry}
             onChangeText={setNewCountry}
             placeholder="Country"
+            accessibilityLabel="New location country"
           />
-          <Pressable style={styles.addBtn} onPress={handleAddLocation}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add location" disabled={busy} style={[styles.addBtn, busy && { opacity: 0.6 }]} onPress={handleAddLocation}>
             <Text style={{ color: "#fff", fontWeight: "700" }}>Add</Text>
           </Pressable>
         </View>
@@ -154,7 +191,7 @@ export default function SettingsScreen() {
         </View>
       )}
 
-      <Pressable style={styles.logoutBtn} onPress={logout}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Log out" style={styles.logoutBtn} onPress={logout}>
         <Text style={styles.logoutText}>Log Out</Text>
       </Pressable>
 
@@ -167,6 +204,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   emptyText: { fontSize: 16, color: "#666" },
+  errorText: { fontSize: 16, color: "#b91c1c", textAlign: "center" },
   section: { fontSize: 20, fontWeight: "700", marginTop: 16, marginBottom: 12 },
   langGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   langBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: "#ddd" },
@@ -186,14 +224,6 @@ const styles = StyleSheet.create({
   addLocRow: { flexDirection: "row", gap: 8, marginTop: 8 },
   input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 12, fontSize: 14 },
   addBtn: { backgroundColor: "#e11d48", paddingHorizontal: 16, borderRadius: 10, justifyContent: "center" },
-  upgradeBtn: {
-    backgroundColor: "#f59e0b",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  upgradeBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   logoutBtn: {
     borderWidth: 1,
     borderColor: "#ddd",

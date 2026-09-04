@@ -11,6 +11,23 @@ import type {
   MatchWithProfile,
 } from "./types";
 import { normalizeDiscoveryFilters } from "./dating-state";
+const {
+  ALLOWED_PHOTO_MIME_TYPES,
+  PHOTO_BUCKET,
+  PHOTO_LIMIT,
+  createPhotoPath,
+  isOwnerPhotoPath,
+  resolvePhotoRows,
+  storagePathFromValue,
+}: {
+  ALLOWED_PHOTO_MIME_TYPES: Set<string>;
+  PHOTO_BUCKET: string;
+  PHOTO_LIMIT: number;
+  createPhotoPath: (userId: string, extension: string) => string;
+  isOwnerPhotoPath: (path: string, userId: string) => boolean;
+  resolvePhotoRows: (storage: typeof supabase.storage, rows: Photo[]) => Promise<Photo[]>;
+  storagePathFromValue: (value: string) => string | null;
+} = require("../../../../lib/photo-storage.cjs");
 
 /* ── Profile ─────────────────────────────────────────────────── */
 
@@ -55,7 +72,7 @@ export async function getPhotos(userId: string): Promise<Photo[]> {
     .eq("user_id", userId)
     .order("position");
   if (error) throw error;
-  return data ?? [];
+  return resolvePhotoRows(supabase.storage, data ?? []);
 }
 
 export async function uploadPhoto(
@@ -63,30 +80,58 @@ export async function uploadPhoto(
   file: File,
   position: number
 ): Promise<Photo | null> {
-  const path = `${userId}/${Date.now()}-${file.name}`;
-  const { error: uploadError } = await supabase.storage
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.id !== userId) throw new Error("Photo owner mismatch.");
+  if (!ALLOWED_PHOTO_MIME_TYPES.has(file.type)) {
+    throw new Error("Choose a JPEG, PNG, or WebP image.");
+  }
+  const { count, error: countError } = await supabase
     .from("photos")
-    .upload(path, file);
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (countError) throw countError;
+  if ((count ?? 0) >= PHOTO_LIMIT) throw new Error("You can upload up to six photos.");
+  const path = createPhotoPath(userId, file.name.split(".").pop() ?? "jpg");
+  const { error: uploadError } = await supabase.storage
+    .from(PHOTO_BUCKET)
+    .upload(path, file, { contentType: file.type });
   if (uploadError) throw uploadError;
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("photos").getPublicUrl(path);
 
   const { data, error } = await supabase
     .from("photos")
-    .insert({ user_id: userId, url: publicUrl, position })
+    .insert({ user_id: userId, url: path, position: Math.max(0, Math.min(position, PHOTO_LIMIT - 1)) })
     .select()
     .single();
   if (error) {
-    await supabase.storage.from("photos").remove([path]);
+    await supabase.storage.from(PHOTO_BUCKET).remove([path]);
     throw error;
   }
-  return data;
+  const [resolved] = await resolvePhotoRows(supabase.storage, [data]);
+  return resolved;
 }
 
 export async function deletePhoto(photoId: string): Promise<void> {
-  const { error } = await supabase.from("photos").delete().eq("id", photoId);
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error("Authentication required.");
+  const { data: photo, error: readError } = await supabase
+    .from("photos")
+    .select("id,user_id,url")
+    .eq("id", photoId)
+    .single();
+  if (readError) throw readError;
+  if (photo.user_id !== currentUser.id) throw new Error("You can only delete your own photos.");
+
+  const path = storagePathFromValue(photo.url);
+  if (path) {
+    if (!isOwnerPhotoPath(path, currentUser.id)) throw new Error("Invalid photo storage path.");
+    const { error: storageError } = await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+    if (storageError) throw storageError;
+  }
+  const { error } = await supabase
+    .from("photos")
+    .delete()
+    .eq("id", photoId)
+    .eq("user_id", currentUser.id);
   if (error) throw error;
 }
 
@@ -130,9 +175,10 @@ export async function getDiscoverProfiles(
     .order("position");
 
   if (photosError) throw photosError;
+  const resolvedPhotos = await resolvePhotoRows(supabase.storage, photos ?? []);
   return profiles.map((p) => ({
     ...p,
-    photos: (photos ?? []).filter((ph) => ph.user_id === p.id),
+    photos: resolvedPhotos.filter((ph) => ph.user_id === p.id),
   }));
 }
 

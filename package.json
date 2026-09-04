@@ -12,6 +12,13 @@
     "dev:web": "pnpm -C apps/web dev",
     "dev:mobile": "pnpm -C apps/mobile start",
     "test": "node --test tests/*.test.cjs",
-    "check:web": "pnpm -C apps/web build"
+    "typecheck:web": "pnpm -C apps/web typecheck",
+    "build:web": "pnpm -C apps/web build",
+    "check:mobile:deps": "pnpm -C apps/mobile check:deps",
+    "check:mobile:doctor": "pnpm -C apps/mobile doctor",
+    "check:mobile:config": "pnpm -C apps/mobile check:config",
+    "export:mobile:web": "pnpm -C apps/mobile export:web",
+    "check:web": "pnpm typecheck:web && pnpm build:web",
+    "check:release": "pnpm test && pnpm check:web && pnpm check:mobile:deps && pnpm check:mobile:doctor && pnpm check:mobile:config && pnpm export:mobile:web"
   }
 }

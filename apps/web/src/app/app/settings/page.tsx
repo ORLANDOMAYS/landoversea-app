@@ -33,31 +33,41 @@ export default function SettingsPage() {
   const [newCity, setNewCity] = useState("");
   const [newCountry, setNewCountry] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ kind: "error" | "success"; message: string } | null>(null);
 
   useEffect(() => {
-    getCurrentUser().then(async (user) => {
-      if (!user) return;
-      setUserId(user.id);
-
-      const [profile, locs] = await Promise.all([
-        getProfile(user.id),
-        getUserLocations(user.id),
-      ]);
-
-      if (profile) {
-        setLanguage(profile.language ?? "en");
-        setPremium(profile.premium);
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) throw new Error("Please sign in to view settings.");
+        setUserId(user.id);
+        const [profile, locs] = await Promise.all([getProfile(user.id), getUserLocations(user.id)]);
+        if (profile) {
+          setLanguage(profile.language ?? "en");
+          setPremium(profile.premium);
+        }
+        setLocations(locs);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load settings.");
+      } finally {
+        setLoading(false);
       }
-      setLocations(locs);
-      setLoading(false);
-    });
+    })();
   }, []);
 
   async function handleSaveLanguage() {
     if (!userId) return;
     setSaving(true);
-    await upsertProfile(userId, { language } as Partial<Profile>);
-    setSaving(false);
+    setStatus(null);
+    try {
+      await upsertProfile(userId, { language } as Partial<Profile>);
+      setStatus({ kind: "success", message: "Language saved." });
+    } catch (err) {
+      setStatus({ kind: "error", message: err instanceof Error ? err.message : "Unable to save language." });
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleAddLocation() {
@@ -65,17 +75,27 @@ export default function SettingsPage() {
     if (!premium) return;
     if (locations.length >= 3) return;
 
-    const loc = await addUserLocation(userId, newCity, newCountry);
-    if (loc) {
-      setLocations((prev) => [...prev, loc]);
-      setNewCity("");
-      setNewCountry("");
+    setStatus(null);
+    try {
+      const loc = await addUserLocation(userId, newCity.trim(), newCountry.trim());
+      if (loc) {
+        setLocations((prev) => [...prev, loc]);
+        setNewCity("");
+        setNewCountry("");
+      }
+    } catch (err) {
+      setStatus({ kind: "error", message: err instanceof Error ? err.message : "Unable to add location." });
     }
   }
 
   async function handleRemoveLocation(id: string) {
-    await removeUserLocation(id);
-    setLocations((prev) => prev.filter((l) => l.id !== id));
+    setStatus(null);
+    try {
+      await removeUserLocation(id);
+      setLocations((prev) => prev.filter((l) => l.id !== id));
+    } catch (err) {
+      setStatus({ kind: "error", message: err instanceof Error ? err.message : "Unable to remove location." });
+    }
   }
 
   async function handleLogout() {
@@ -90,10 +110,18 @@ export default function SettingsPage() {
       </div>
     );
   }
+  if (error) {
+    return <div className="flex h-[70vh] items-center justify-center px-4"><p role="alert" className="text-center text-red-700">{error}</p></div>;
+  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4 pb-8">
       <h1 className="text-xl font-bold mb-6">Settings</h1>
+      {status && (
+        <div role={status.kind === "error" ? "alert" : "status"} className={`mb-4 rounded-lg p-3 text-sm ${status.kind === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+          {status.message}
+        </div>
+      )}
 
       {/* Language */}
       <div className="bg-white rounded-2xl p-5 border border-gray-100 mb-4">
@@ -142,15 +170,10 @@ export default function SettingsPage() {
         {!premium ? (
           <div className="text-center py-6">
             <Crown className="w-12 h-12 text-amber-500 mx-auto mb-3" />
-            <h3 className="font-semibold mb-1">Upgrade to Premium</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Show your profile in up to 3 cities worldwide.
-              <br />
-              Tokyo, Bangkok, New York — you choose.
+            <h3 className="font-semibold mb-1">Premium unavailable</h3>
+            <p className="text-sm text-gray-600">
+              Premium upgrades will remain unavailable until secure billing is connected.
             </p>
-            <button className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full font-medium hover:from-amber-600 hover:to-amber-700 transition">
-              Upgrade — $9.99/month
-            </button>
           </div>
         ) : (
           <>

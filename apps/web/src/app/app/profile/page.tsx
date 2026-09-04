@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Camera, Plus, Trash2, Save, Shield } from "lucide-react";
+import { Plus, Trash2, Save, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   getCurrentUser,
@@ -183,16 +183,6 @@ export default function ProfilePage() {
           aria-label="Choose profile photo"
         />
       </div>
-
-      {/* Verify button */}
-      {!verified && (
-        <button
-          onClick={() => router.push("/app/verify")}
-          className="w-full mb-6 py-3 bg-blue-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-blue-700 transition"
-        >
-          <Camera className="w-5 h-5" /> Verify Your Profile
-        </button>
-      )}
 
       {/* Form */}
       <div className="space-y-4">

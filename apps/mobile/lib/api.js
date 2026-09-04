@@ -1,5 +1,14 @@
 import { supabase } from "./supabase";
 import { normalizeDiscoveryFilters } from "./dating-state";
+const {
+  ALLOWED_PHOTO_MIME_TYPES,
+  PHOTO_BUCKET,
+  PHOTO_LIMIT,
+  createPhotoPath,
+  isOwnerPhotoPath,
+  resolvePhotoRows,
+  storagePathFromValue,
+} = require("../../../lib/photo-storage.cjs");
 
 /* ── Auth ─────────────────────────────────────────────────────── */
 
@@ -47,41 +56,69 @@ export async function getPhotos(userId) {
     .eq("user_id", userId)
     .order("position");
   if (error) throw error;
-  return data ?? [];
+  return resolvePhotoRows(supabase.storage, data ?? []);
 }
 
 export async function uploadPhoto(userId, uri, position) {
   if (!supabase) throw new Error("Supabase is not configured.");
-  const ext = uri.split(".").pop() || "jpg";
-  const path = `${userId}/${Date.now()}.${ext}`;
+  const currentUser = await getCurrentUser();
+  if (!currentUser || currentUser.id !== userId) throw new Error("Photo owner mismatch.");
 
   const response = await fetch(uri);
+  if (!response.ok) throw new Error("Unable to read the selected photo.");
   const blob = await response.blob();
+  const mimeType = blob.type || "image/jpeg";
+  if (!ALLOWED_PHOTO_MIME_TYPES.has(mimeType)) {
+    throw new Error("Choose a JPEG, PNG, or WebP image.");
+  }
+  const { count, error: countError } = await supabase
+    .from("photos")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (countError) throw countError;
+  if ((count ?? 0) >= PHOTO_LIMIT) throw new Error("You can upload up to six photos.");
+  const path = createPhotoPath(userId, mimeType.split("/")[1]);
 
   const { error: uploadError } = await supabase.storage
-    .from("photos")
-    .upload(path, blob, { contentType: `image/${ext}` });
+    .from(PHOTO_BUCKET)
+    .upload(path, blob, { contentType: mimeType });
   if (uploadError) throw uploadError;
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("photos").getPublicUrl(path);
 
   const { data, error } = await supabase
     .from("photos")
-    .insert({ user_id: userId, url: publicUrl, position })
+    .insert({ user_id: userId, url: path, position: Math.max(0, Math.min(position, PHOTO_LIMIT - 1)) })
     .select()
     .single();
   if (error) {
-    await supabase.storage.from("photos").remove([path]);
+    await supabase.storage.from(PHOTO_BUCKET).remove([path]);
     throw error;
   }
-  return data;
+  const [resolved] = await resolvePhotoRows(supabase.storage, [data]);
+  return resolved;
 }
 
 export async function deletePhoto(photoId) {
   if (!supabase) throw new Error("Supabase is not configured.");
-  const { error } = await supabase.from("photos").delete().eq("id", photoId);
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error("Authentication required.");
+  const { data: photo, error: readError } = await supabase
+    .from("photos")
+    .select("id,user_id,url")
+    .eq("id", photoId)
+    .single();
+  if (readError) throw readError;
+  if (photo.user_id !== currentUser.id) throw new Error("You can only delete your own photos.");
+  const path = storagePathFromValue(photo.url);
+  if (path) {
+    if (!isOwnerPhotoPath(path, currentUser.id)) throw new Error("Invalid photo storage path.");
+    const { error: storageError } = await supabase.storage.from(PHOTO_BUCKET).remove([path]);
+    if (storageError) throw storageError;
+  }
+  const { error } = await supabase
+    .from("photos")
+    .delete()
+    .eq("id", photoId)
+    .eq("user_id", currentUser.id);
   if (error) throw error;
 }
 
@@ -121,9 +158,10 @@ export async function getDiscoverProfiles(userId, filters = {}) {
     .order("position");
 
   if (photosError) throw photosError;
+  const resolvedPhotos = await resolvePhotoRows(supabase.storage, photos ?? []);
   return profiles.map((p) => ({
     ...p,
-    photos: (photos ?? []).filter((ph) => ph.user_id === p.id),
+    photos: resolvedPhotos.filter((ph) => ph.user_id === p.id),
   }));
 }
 
@@ -284,22 +322,26 @@ export async function removeUserLocation(locationId) {
 /* ── Coaches ──────────────────────────────────────────────────── */
 
 export async function getCoaches() {
-  if (!supabase) return [];
-  const { data } = await supabase
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { data, error } = await supabase
     .from("coaches")
     .select("*")
+    .eq("approved", true)
     .eq("active", true)
     .order("rating", { ascending: false });
+  if (error) throw error;
   return data ?? [];
 }
 
 export async function getCoachById(coachId) {
-  if (!supabase) return null;
-  const { data } = await supabase
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { data, error } = await supabase
     .from("coaches")
     .select("*")
     .eq("id", coachId)
+    .eq("approved", true)
     .eq("active", true)
-    .single();
+    .maybeSingle();
+  if (error) throw error;
   return data;
 }
