@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, X, Star, MapPin, Shield, SlidersHorizontal } from "lucide-react";
+import { Heart, X, Star, MapPin, SlidersHorizontal } from "lucide-react";
 import { getCurrentUser, getDiscoverProfiles, recordSwipe, checkNewMatch } from "../../lib/api";
 import type { ProfileWithPhotos } from "../../lib/types";
 import { nextSwipeState } from "../../lib/dating-state";
@@ -184,9 +184,6 @@ export default function SwipePage() {
                 {currentProfile.display_name}
                 {currentProfile.age ? `, ${currentProfile.age}` : ""}
               </h2>
-              {currentProfile.verified && (
-                <Shield className="w-5 h-5 text-blue-400" fill="currentColor" />
-              )}
             </div>
             {currentProfile.city && (
               <div className="flex items-center gap-1 text-white/80 text-sm mb-2">

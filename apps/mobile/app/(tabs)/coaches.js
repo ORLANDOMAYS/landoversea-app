@@ -47,7 +47,6 @@ export default function CoachesScreen() {
         <View style={styles.coachInfo}>
           <View style={styles.nameRow}>
             <Text style={styles.coachName}>{item.display_name}</Text>
-            {item.verified && <Text style={styles.verified}>✓</Text>}
           </View>
           <Text style={styles.coachMeta}>
             ⭐ {item.rating > 0 ? item.rating.toFixed(1) : "New"} · {item.total_sessions} sessions
@@ -72,7 +71,7 @@ export default function CoachesScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Dating Coaches</Text>
         <Text style={styles.subtitle}>
-          Get personalized help from verified dating experts
+          Browse approved dating coach profiles
         </Text>
       </View>
 
@@ -147,7 +146,6 @@ const styles = StyleSheet.create({
   coachInfo: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   coachName: { fontSize: 17, fontWeight: "700" },
-  verified: { fontSize: 14, color: "#3b82f6", fontWeight: "700" },
   coachMeta: { fontSize: 13, color: "#595959", marginTop: 2 },
   tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 },
   tag: {

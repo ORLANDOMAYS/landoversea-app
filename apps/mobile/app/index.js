@@ -42,17 +42,17 @@ export default function LandingScreen() {
       />
       <Text style={styles.appName}>LandOverSea</Text>
       <Text style={styles.tagline}>
-        Find love across borders.{"\n"}Real-time translation. Real connections.
+        Find love across borders.{"\n"}Original messages. Real connections.
       </Text>
 
       <View style={styles.features}>
         <View style={styles.featureRow}>
           <Text style={styles.featureIcon}>🌐</Text>
-          <Text style={styles.featureText}>19 languages translated live</Text>
+          <Text style={styles.featureText}>Cross-border matching and chat</Text>
         </View>
         <View style={styles.featureRow}>
-          <Text style={styles.featureIcon}>✓</Text>
-          <Text style={styles.featureText}>Facial verification for safety</Text>
+          <Text style={styles.featureIcon}>🔒</Text>
+          <Text style={styles.featureText}>Private profile photo storage</Text>
         </View>
         <View style={styles.featureRow}>
           <Text style={styles.featureIcon}>📍</Text>

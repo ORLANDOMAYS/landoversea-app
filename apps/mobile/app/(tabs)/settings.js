@@ -154,7 +154,7 @@ export default function SettingsScreen() {
       {locations.map((loc) => (
         <View key={loc.id} style={styles.locRow}>
           <Text style={styles.locText}>
-            📍 {loc.city}, {loc.country}
+            📍 {[loc.city, loc.country].filter(Boolean).join(", ") || "Saved location"}
           </Text>
           <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${loc.city}, ${loc.country}`} disabled={busy} onPress={() => handleRemoveLocation(loc.id)}>
             <Text style={styles.removeText}>Remove</Text>

@@ -130,7 +130,7 @@ export default function SettingsPage() {
           <h2 className="font-semibold">Language</h2>
         </div>
         <p className="text-sm text-gray-500 mb-3">
-          Messages you send will be translated from this language.
+          Your preferred language is shown to matches. Automatic translation is currently unavailable.
         </p>
         <label htmlFor="settings-language" className="sr-only">Translation language</label>
         <select
@@ -191,7 +191,7 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-rose-600" />
                     <span className="text-sm font-medium">
-                      {loc.city}, {loc.country}
+                      {[loc.city, loc.country].filter(Boolean).join(", ") || "Saved location"}
                     </span>
                   </div>
                   <button

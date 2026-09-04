@@ -18,15 +18,13 @@ import {
   sendMessage,
   subscribeToMessages,
 } from "../lib/api";
-import { translateText } from "../lib/translate";
-import { restoreFailedDraft, translatedBodyOrNull } from "../lib/dating-state";
+import { restoreFailedDraft } from "../lib/dating-state";
 
 export default function ChatScreen() {
   const params = useLocalSearchParams();
   const matchId = typeof params.matchId === "string" && params.matchId.trim() ? params.matchId : null;
   const [userId, setUserId] = useState(null);
   const [myLang, setMyLang] = useState("en");
-  const [otherLang, setOtherLang] = useState("en");
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -60,7 +58,6 @@ export default function ChatScreen() {
 
       const match = matches.find((m) => m.id === matchId);
       if (!match) throw new Error("This match is unavailable or you do not have access.");
-      if (match?.profile?.language) setOtherLang(match.profile.language);
     } catch (err) {
       setError(err?.message || "Unable to load chat.");
     } finally {
@@ -97,12 +94,7 @@ export default function ChatScreen() {
     setInput("");
 
     try {
-      let translated = null;
-      if (myLang !== otherLang) {
-        const result = await translateText(body, myLang, otherLang);
-        translated = translatedBodyOrNull(body, result);
-      }
-      const sent = await sendMessage(matchId, userId, body, myLang, translated);
+      const sent = await sendMessage(matchId, userId, body, myLang);
       if (sent) setMessages((prev) => prev.some((message) => message.id === sent.id) ? prev : [...prev, sent]);
     } catch (err) {
       setInput((current) => restoreFailedDraft(current, body));
@@ -148,6 +140,11 @@ export default function ChatScreen() {
           {connectionStatus === "disconnected" && <Pressable accessibilityRole="button" accessibilityLabel="Reconnect live messages" onPress={() => setSubscriptionKey((key) => key + 1)}><Text style={styles.reconnectText}>Reconnect</Text></Pressable>}
         </View>
       )}
+      <View style={styles.translationNotice}>
+        <Text style={styles.translationNoticeText}>
+          Automatic translation is currently unavailable. Messages are sent in their original language.
+        </Text>
+      </View>
       <FlatList
         ref={listRef}
         data={messages}
@@ -190,6 +187,8 @@ const styles = StyleSheet.create({
   connectionRow: { flexDirection: "row", justifyContent: "center", gap: 8, padding: 8, backgroundColor: "#fffbeb" },
   connectionText: { color: "#92400e", fontSize: 12 },
   reconnectText: { color: "#92400e", fontSize: 12, fontWeight: "700", textDecorationLine: "underline" },
+  translationNotice: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#fffbeb", borderBottomWidth: 1, borderBottomColor: "#fde68a" },
+  translationNoticeText: { color: "#78350f", fontSize: 12, textAlign: "center" },
   sendError: { color: "#b91c1c", paddingHorizontal: 16, paddingVertical: 6, backgroundColor: "#fef2f2" },
   msgRow: { marginBottom: 8 },
   msgRowRight: { alignItems: "flex-end" },

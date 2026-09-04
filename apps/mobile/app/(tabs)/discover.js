@@ -168,7 +168,6 @@ export default function DiscoverScreen() {
                 {currentProfile.display_name || "Unknown"}
                 {currentProfile.age ? `, ${currentProfile.age}` : ""}
               </Text>
-              {currentProfile.verified && <Text style={styles.badge}>✓</Text>}
             </View>
             {currentProfile.city && (
               <Text style={styles.cardLocation}>
@@ -255,7 +254,6 @@ const styles = StyleSheet.create({
   },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardName: { fontSize: 26, fontWeight: "800", color: "#fff" },
-  badge: { fontSize: 16, color: "#38bdf8", fontWeight: "700" },
   cardLocation: { fontSize: 14, color: "#ddd", marginTop: 4 },
   cardBio: { fontSize: 14, color: "#eee", marginTop: 6 },
   buttons: {

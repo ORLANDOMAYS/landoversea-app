@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Globe, Shield, MapPin, MessageCircle, ArrowRight, Heart, Users, Lock, Smartphone } from "lucide-react";
+import { Globe, Image, MapPin, MessageCircle, ArrowRight, Heart, Users, Lock, Smartphone } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function LandingPage() {
@@ -109,13 +109,13 @@ export default function LandingPage() {
           </div>
           <div className="hidden md:block w-px h-10 bg-gray-700" />
           <div>
-            <p className="text-3xl font-extrabold text-pink-400">50+</p>
-            <p className="text-sm text-gray-300 mt-1">Languages Supported</p>
+            <p className="text-3xl font-extrabold text-pink-400">6</p>
+            <p className="text-sm text-gray-300 mt-1">Profile Photos</p>
           </div>
           <div className="hidden md:block w-px h-10 bg-gray-700" />
           <div>
-            <p className="text-3xl font-extrabold text-pink-400">100%</p>
-            <p className="text-sm text-gray-300 mt-1">Profile Verified</p>
+            <p className="text-3xl font-extrabold text-pink-400">Private</p>
+            <p className="text-sm text-gray-300 mt-1">Photo Storage</p>
           </div>
         </div>
       </section>
@@ -129,16 +129,15 @@ export default function LandingPage() {
               <MessageCircle className="w-7 h-7 text-pink-600" />
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
-              1-on-1 Chat with Translation
+              1-on-1 Chat
             </h2>
             <p className="text-gray-600 text-lg leading-relaxed mb-4">
-              Connect on a deeper level with our real-time chat feature. Messages
-              are automatically translated so both people see their own language.
-              Share travel plans, exchange ideas, and learn each other&apos;s
-              language naturally.
+              Connect through private one-to-one conversations with your matches.
+              Messages are sent in their original language while automatic
+              translation remains unavailable.
             </p>
             <p className="text-pink-600 font-semibold text-lg">
-              Powered by real-time AI translation
+              Original-message delivery with live updates
             </p>
           </div>
           <div className="flex-1 flex justify-center">
@@ -238,13 +237,13 @@ export default function LandingPage() {
         {[
           {
             icon: Globe,
-            title: "Real-Time Translation",
-            desc: "Chat in your language \u2014 they see theirs. Learn together while you connect.",
+            title: "Cross-Border Connections",
+            desc: "Meet matches around the world and exchange messages in their original language.",
           },
           {
-            icon: Shield,
-            title: "Identity Verification",
-            desc: "Every profile verified with facial recognition. No catfishing, just real people.",
+            icon: Image,
+            title: "Private Profile Photos",
+            desc: "Profile photos are stored privately and displayed through time-limited links.",
           },
           {
             icon: MapPin,

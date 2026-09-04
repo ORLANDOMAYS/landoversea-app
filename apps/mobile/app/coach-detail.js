@@ -66,7 +66,6 @@ export default function CoachDetailScreen() {
         <Image source={{ uri: avatarUrl }} style={styles.avatar} />
         <View style={styles.nameRow}>
           <Text style={styles.name}>{coach.display_name}</Text>
-          {coach.verified && <Text style={styles.verified}>✓</Text>}
         </View>
         <Text style={styles.meta}>
           ⭐ {coach.rating > 0 ? coach.rating.toFixed(1) : "New"} ({coach.total_reviews} reviews) · {coach.total_sessions} sessions
@@ -125,7 +124,6 @@ const styles = StyleSheet.create({
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 12 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   name: { fontSize: 24, fontWeight: "800" },
-  verified: { fontSize: 18, color: "#3b82f6", fontWeight: "700" },
   meta: { fontSize: 14, color: "#595959", marginTop: 4, textAlign: "center" },
   languages: { fontSize: 14, color: "#666", marginTop: 4 },
   section: { marginBottom: 16 },

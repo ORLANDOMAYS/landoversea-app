@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Plus, Trash2, Save, Shield } from "lucide-react";
+import { Plus, Trash2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   getCurrentUser,
@@ -33,7 +33,6 @@ export default function ProfilePage() {
   const [language, setLanguage] = useState("en");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
-  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -54,7 +53,6 @@ export default function ProfilePage() {
         setLanguage(profile.language ?? "en");
         setCity(profile.city ?? "");
         setCountry(profile.country ?? "");
-        setVerified(profile.verified);
         }
         setPhotos(userPhotos);
       } catch (error) {
@@ -133,11 +131,6 @@ export default function ProfilePage() {
     <div className="max-w-lg mx-auto px-4 py-4 pb-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold">Edit Profile</h1>
-        {verified && (
-          <span className="flex items-center gap-1 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-            <Shield className="w-4 h-4" fill="currentColor" /> Verified
-          </span>
-        )}
       </div>
       {status && (
         <div role={status.kind === "error" ? "alert" : "status"} className={`mb-4 rounded-lg p-3 text-sm ${status.kind === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>

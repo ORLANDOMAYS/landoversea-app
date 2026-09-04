@@ -11,8 +11,7 @@ import {
   getProfile,
   getMatches,
 } from "../../../lib/api";
-import { translateText } from "../../../lib/translate";
-import { restoreFailedDraft, translatedBodyOrNull } from "../../../lib/dating-state";
+import { restoreFailedDraft } from "../../../lib/dating-state";
 import type { Message, Profile, MatchWithProfile } from "../../../lib/types";
 import { LANGUAGES } from "../../../lib/types";
 
@@ -103,17 +102,11 @@ function ChatContent() {
     setSendError(null);
 
     const myLang = myProfile?.language ?? "en";
-    const otherLang = otherProfile?.language ?? "en";
     const body = input.trim();
 
     setInput("");
     try {
-      let translated: string | undefined;
-      if (myLang !== otherLang) {
-        const result = await translateText(body, myLang, otherLang);
-        translated = translatedBodyOrNull(body, result) ?? undefined;
-      }
-      const sent = await sendMessage(matchId, userId, body, myLang, translated);
+      const sent = await sendMessage(matchId, userId, body, myLang);
       if (sent) setMessages((prev) => prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]);
     } catch (err) {
       setInput((current) => restoreFailedDraft(current, body));
@@ -173,6 +166,9 @@ function ChatContent() {
           {connectionStatus === "disconnected" && <button className="underline" onClick={() => setSubscriptionKey((key) => key + 1)}>Reconnect</button>}
         </div>
       )}
+      <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900">
+        Automatic translation is currently unavailable. Messages are sent in their original language.
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
