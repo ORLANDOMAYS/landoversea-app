@@ -64,6 +64,81 @@ test("object paths and legacy same-bucket URLs are freshly signed while external
   );
 });
 
+test("signed photo rows can be renewed before their current URL expires", async () => {
+  let signature = 0;
+  const storage = {
+    from(bucket) {
+      assert.equal(bucket, "photos");
+      return {
+        async createSignedUrl(objectPath, expiresIn) {
+          signature += 1;
+          return {
+            data: {
+              signedUrl: `https://project.supabase.co/storage/v1/object/sign/photos/${objectPath}?token=${signature}`,
+            },
+            error: null,
+            expiresIn,
+          };
+        },
+      };
+    },
+  };
+
+  const first = await storageHelpers.resolvePhotoRows(storage, [
+    { id: "photo-1", user_id: "user-123", url: "user-123/photo.jpg" },
+  ]);
+  const renewed = await storageHelpers.resolvePhotoRows(storage, first);
+
+  assert.equal(signature, 2);
+  assert.notEqual(first[0].url, renewed[0].url);
+  assert.equal(storageHelpers.storagePathFromValue(renewed[0].url), "user-123/photo.jpg");
+  assert.ok(storageHelpers.SIGNED_URL_REFRESH_INTERVAL_MS > 0);
+  assert.ok(
+    storageHelpers.SIGNED_URL_REFRESH_INTERVAL_MS
+      < storageHelpers.SIGNED_URL_TTL_SECONDS * 1000
+  );
+});
+
+test("stale photo renewal cannot overwrite a newer discovery result", () => {
+  const source = [{
+    id: "profile-1",
+    display_name: "Older profile",
+    photos: [
+      { id: "photo-1", url: "https://signed.example/photo-1?token=old" },
+      { id: "photo-removed", url: "https://signed.example/removed?token=old" },
+    ],
+  }];
+  const refreshed = [{
+    ...source[0],
+    photos: [
+      { id: "photo-1", url: "https://signed.example/photo-1?token=renewed" },
+      { id: "photo-removed", url: "https://signed.example/removed?token=renewed" },
+    ],
+  }];
+  const current = [{
+    id: "profile-1",
+    display_name: "Newer profile",
+    photos: [
+      { id: "photo-1", url: "https://signed.example/photo-1?token=newer-load" },
+      { id: "photo-new", url: "https://signed.example/new?token=newer-load" },
+    ],
+  }];
+
+  assert.deepEqual(
+    storageHelpers.mergeRefreshedProfilePhotos(current, source, refreshed),
+    current
+  );
+
+  const unchangedCurrent = [{
+    ...source[0],
+    photos: [{ id: "photo-1", url: source[0].photos[0].url }],
+  }];
+  assert.equal(
+    storageHelpers.mergeRefreshedProfilePhotos(unchangedCurrent, source, refreshed)[0].photos[0].url,
+    "https://signed.example/photo-1?token=renewed"
+  );
+});
+
 test("migration 006 normalizes safe legacy photo URLs and removes broad profile coordinates", () => {
   const migration = read("supabase/migrations/006_legacy_photo_and_coordinate_privacy.sql");
   assert.match(migration, /storage\/v1\/object\/\(public\|sign\|authenticated\)\/photos/i);
@@ -103,11 +178,27 @@ test("web and mobile photo APIs store paths, sign reads, cap uploads, and remove
   for (const file of ["apps/web/src/lib/api.ts", "apps/mobile/lib/api.js"]) {
     const source = read(file);
     assert.match(source, /resolvePhotoRows/);
+    assert.match(source, /refreshPhotoUrls/);
+    assert.match(source, /refreshProfilePhotoUrls/);
     assert.match(source, /PHOTO_LIMIT/);
     assert.match(source, /isOwnerPhotoPath/);
     assert.match(source, /\.remove\(\[path\]\)/);
     assert.match(source, /url:\s*path/);
     assert.doesNotMatch(source, /getPublicUrl/);
+  }
+});
+
+test("profile and discovery views renew signed photos before expiry and retry broken images", () => {
+  for (const file of [
+    "apps/web/src/app/app/profile/page.tsx",
+    "apps/web/src/app/app/page.tsx",
+    "apps/mobile/app/(tabs)/profile.js",
+    "apps/mobile/app/(tabs)/discover.js",
+  ]) {
+    const source = read(file);
+    assert.match(source, /SIGNED_URL_REFRESH_INTERVAL_MS/);
+    assert.match(source, /setInterval/);
+    assert.match(source, /onError=/);
   }
 });
 

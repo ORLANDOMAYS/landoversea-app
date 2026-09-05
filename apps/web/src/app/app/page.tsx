@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, X, Star, MapPin, SlidersHorizontal } from "lucide-react";
-import { getCurrentUser, getDiscoverProfiles, recordSwipe, checkNewMatch } from "../../lib/api";
+import {
+  SIGNED_URL_REFRESH_INTERVAL_MS,
+  checkNewMatch,
+  getCurrentUser,
+  getDiscoverProfiles,
+  mergeRefreshedProfilePhotos,
+  recordSwipe,
+  refreshProfilePhotoUrls,
+} from "../../lib/api";
 import type { ProfileWithPhotos } from "../../lib/types";
 import { nextSwipeState } from "../../lib/dating-state";
 
@@ -15,9 +23,11 @@ export default function SwipePage() {
   const [matchPopup, setMatchPopup] = useState<string | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [photoRefreshError, setPhotoRefreshError] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({ minAge: "18", maxAge: "120", gender: "", location: "" });
   const [appliedFilters, setAppliedFilters] = useState(filters);
+  const photoRefreshInFlight = useRef(false);
 
   const loadProfiles = useCallback(async () => {
     setLoading(true);
@@ -34,6 +44,7 @@ export default function SwipePage() {
         });
         setProfiles(p);
         setCurrentIndex(0);
+        setPhotoRefreshError(null);
       } else {
         setError("Please sign in to discover people.");
       }
@@ -44,7 +55,37 @@ export default function SwipePage() {
     }
   }, [appliedFilters]);
 
+  const renewPhotoUrls = useCallback(async () => {
+    if (photoRefreshInFlight.current || profiles.length === 0) return;
+    photoRefreshInFlight.current = true;
+    try {
+      const sourceProfiles = profiles;
+      const refreshed = await refreshProfilePhotoUrls(profiles);
+      setProfiles((current) => mergeRefreshedProfilePhotos(current, sourceProfiles, refreshed));
+      setPhotoRefreshError(null);
+    } catch (err) {
+      setPhotoRefreshError(err instanceof Error ? err.message : "Unable to refresh profile photos.");
+    } finally {
+      photoRefreshInFlight.current = false;
+    }
+  }, [profiles]);
+
   useEffect(() => { void loadProfiles(); }, [loadProfiles]);
+
+  useEffect(() => {
+    if (profiles.length === 0) return undefined;
+    const timer = window.setInterval(() => {
+      void renewPhotoUrls();
+    }, SIGNED_URL_REFRESH_INTERVAL_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void renewPhotoUrls();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [profiles.length, renewPhotoUrls]);
 
   const handleSwipe = useCallback(
     async (direction: "like" | "pass" | "superlike") => {
@@ -134,7 +175,7 @@ export default function SwipePage() {
           </div>
         )}
       </div>
-      {error && <p role="alert" className="w-full mb-2 text-sm text-red-700">{error} Retry the action.</p>}
+      {(error || photoRefreshError) && <p role="alert" className="w-full mb-2 text-sm text-red-700">{error || photoRefreshError} Retry the action.</p>}
       {/* Match Popup */}
       <AnimatePresence>
         {matchPopup && (
@@ -172,6 +213,7 @@ export default function SwipePage() {
             src={photoUrl}
             alt={currentProfile.display_name ?? "Profile"}
             className="w-full h-full object-cover"
+            onError={() => void renewPhotoUrls()}
           />
 
           {/* Gradient overlay */}

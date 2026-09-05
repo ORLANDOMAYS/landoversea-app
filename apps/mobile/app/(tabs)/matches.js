@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { View, Text, FlatList, Pressable, Image, StyleSheet } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { getCurrentUser, getMatches } from "../../lib/api";
+import { loadMatchesForCurrentUser } from "../../lib/match-loader";
 
 export default function MatchesScreen() {
   const router = useRouter();
@@ -10,29 +11,24 @@ export default function MatchesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    getCurrentUser()
-      .then((user) => {
-        if (user) setUserId(user.id);
-        else setLoading(false);
-      })
-      .catch((err) => {
-        setError(err?.message || "Unable to check your session.");
-        setLoading(false);
-      });
+  const loadMatches = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await loadMatchesForCurrentUser(getCurrentUser, getMatches);
+      setUserId(result.userId);
+      setMatches(result.matches);
+    } catch (err) {
+      setError(err?.message || "Unable to load matches.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      if (userId) {
-        setLoading(true);
-        setError(null);
-        getMatches(userId)
-          .then(setMatches)
-          .catch((err) => setError(err?.message || "Unable to load matches."))
-          .finally(() => setLoading(false));
-      }
-    }, [userId])
+      void loadMatches();
+    }, [loadMatches])
   );
 
   function renderMatch({ item }) {
@@ -78,7 +74,7 @@ export default function MatchesScreen() {
   }
 
   if (error) {
-    return <View style={styles.center}><Text accessibilityRole="alert" style={styles.errorText}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Retry loading matches" style={styles.retryBtn} onPress={() => { setLoading(true); setError(null); getMatches(userId).then(setMatches).catch((err) => setError(err?.message || "Unable to load matches.")).finally(() => setLoading(false)); }}><Text style={styles.retryText}>Retry</Text></Pressable></View>;
+    return <View style={styles.center}><Text accessibilityRole="alert" style={styles.errorText}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Retry loading matches" style={styles.retryBtn} onPress={loadMatches}><Text style={styles.retryText}>Retry</Text></Pressable></View>;
   }
 
   if (!userId) {

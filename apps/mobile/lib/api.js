@@ -4,11 +4,20 @@ const {
   ALLOWED_PHOTO_MIME_TYPES,
   PHOTO_BUCKET,
   PHOTO_LIMIT,
+  SIGNED_URL_REFRESH_INTERVAL_MS,
   createPhotoPath,
   isOwnerPhotoPath,
+  mergeRefreshedPhotoRows,
+  mergeRefreshedProfilePhotos,
   resolvePhotoRows,
   storagePathFromValue,
 } = require("../../../lib/photo-storage.cjs");
+
+export {
+  SIGNED_URL_REFRESH_INTERVAL_MS,
+  mergeRefreshedPhotoRows,
+  mergeRefreshedProfilePhotos,
+};
 
 /* ── Auth ─────────────────────────────────────────────────────── */
 
@@ -57,6 +66,21 @@ export async function getPhotos(userId) {
     .order("position");
   if (error) throw error;
   return resolvePhotoRows(supabase.storage, data ?? []);
+}
+
+export async function refreshPhotoUrls(photos) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  return resolvePhotoRows(supabase.storage, photos ?? []);
+}
+
+export async function refreshProfilePhotoUrls(profiles) {
+  const photos = (profiles ?? []).flatMap((profile) => profile.photos ?? []);
+  const refreshed = await refreshPhotoUrls(photos);
+  const refreshedById = new Map(refreshed.map((photo) => [photo.id, photo]));
+  return (profiles ?? []).map((profile) => ({
+    ...profile,
+    photos: (profile.photos ?? []).map((photo) => refreshedById.get(photo.id) ?? photo),
+  }));
 }
 
 export async function uploadPhoto(userId, uri, position) {

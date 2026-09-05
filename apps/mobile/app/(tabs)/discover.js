@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { View, Text, Image, Pressable, StyleSheet, Dimensions, Alert, TextInput } from "react-native";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { View, Text, Image, Pressable, StyleSheet, Dimensions, Alert, AppState, TextInput } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
@@ -8,7 +8,15 @@ import Animated, {
   withTiming,
   runOnJS,
 } from "react-native-reanimated";
-import { getCurrentUser, getDiscoverProfiles, recordSwipe, checkNewMatch } from "../../lib/api";
+import {
+  SIGNED_URL_REFRESH_INTERVAL_MS,
+  checkNewMatch,
+  getCurrentUser,
+  getDiscoverProfiles,
+  mergeRefreshedProfilePhotos,
+  recordSwipe,
+  refreshProfilePhotoUrls,
+} from "../../lib/api";
 import { nextSwipeState } from "../../lib/dating-state";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -21,11 +29,13 @@ export default function DiscoverScreen() {
   const [swiping, setSwiping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [photoRefreshError, setPhotoRefreshError] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({ minAge: "18", maxAge: "120", gender: "", location: "" });
   const [appliedFilters, setAppliedFilters] = useState({ minAge: "18", maxAge: "120", gender: "", location: "" });
 
   const translateX = useSharedValue(0);
+  const photoRefreshInFlight = useRef(false);
 
   const loadProfiles = useCallback(async () => {
     setLoading(true);
@@ -42,6 +52,7 @@ export default function DiscoverScreen() {
         });
         setProfiles(result);
         setCurrentIndex(0);
+        setPhotoRefreshError(null);
       } else {
         setUserId(null);
       }
@@ -52,7 +63,36 @@ export default function DiscoverScreen() {
     }
   }, [appliedFilters]);
 
+  const renewPhotoUrls = useCallback(async () => {
+    if (photoRefreshInFlight.current || profiles.length === 0) return;
+    photoRefreshInFlight.current = true;
+    try {
+      const sourceProfiles = profiles;
+      const refreshed = await refreshProfilePhotoUrls(profiles);
+      setProfiles((current) => mergeRefreshedProfilePhotos(current, sourceProfiles, refreshed));
+      setPhotoRefreshError(null);
+    } catch (err) {
+      setPhotoRefreshError(err?.message || "Unable to refresh profile photos.");
+    } finally {
+      photoRefreshInFlight.current = false;
+    }
+  }, [profiles]);
+
   useEffect(() => { loadProfiles(); }, [loadProfiles]);
+
+  useEffect(() => {
+    if (profiles.length === 0) return undefined;
+    const timer = setInterval(() => {
+      void renewPhotoUrls();
+    }, SIGNED_URL_REFRESH_INTERVAL_MS);
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void renewPhotoUrls();
+    });
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [profiles.length, renewPhotoUrls]);
 
   const handleSwipe = useCallback(
     async (direction) => {
@@ -158,10 +198,10 @@ export default function DiscoverScreen() {
           </View>
         </View>
       )}
-      {error && <Text accessibilityRole="alert" style={styles.inlineError}>{error} Retry the action.</Text>}
+      {(error || photoRefreshError) && <Text accessibilityRole="alert" style={styles.inlineError}>{error || photoRefreshError} Retry the action.</Text>}
       <GestureDetector gesture={gesture}>
         <Animated.View style={[styles.card, animatedStyle]}>
-          <Image source={{ uri: photoUrl }} style={styles.cardImage} />
+          <Image source={{ uri: photoUrl }} style={styles.cardImage} onError={renewPhotoUrls} />
           <View style={styles.cardOverlay}>
             <View style={styles.nameRow}>
               <Text style={styles.cardName}>

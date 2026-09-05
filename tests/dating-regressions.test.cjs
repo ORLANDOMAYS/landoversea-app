@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 const state = require("../apps/mobile/lib/dating-state.js");
+const matchLoader = require("../apps/mobile/lib/match-loader.js");
 
 test("discovery filters clamp ages and sanitize PostgREST filter punctuation", () => {
   assert.deepEqual(
@@ -52,4 +53,37 @@ test("profile surfaces cap photos and expose delete controls", () => {
   assert.match(mobile, /photos\.length < 6/);
   assert.match(web, /aria-label="Delete profile photo"/);
   assert.match(mobile, /accessibilityLabel="Delete profile photo"/);
+});
+
+test("mobile matches retry resolves a recovered session before querying matches", async () => {
+  let sessionAttempts = 0;
+  const queriedUserIds = [];
+  const getCurrentUser = async () => {
+    sessionAttempts += 1;
+    if (sessionAttempts === 1) throw new Error("session unavailable");
+    return { id: "recovered-user" };
+  };
+  const getMatches = async (userId) => {
+    queriedUserIds.push(userId);
+    return [{ id: "match-1" }];
+  };
+
+  await assert.rejects(
+    matchLoader.loadMatchesForCurrentUser(getCurrentUser, getMatches),
+    /session unavailable/
+  );
+  assert.deepEqual(queriedUserIds, []);
+  assert.deepEqual(
+    await matchLoader.loadMatchesForCurrentUser(getCurrentUser, getMatches),
+    { userId: "recovered-user", matches: [{ id: "match-1" }] }
+  );
+  assert.deepEqual(queriedUserIds, ["recovered-user"]);
+
+  const mobile = fs.readFileSync(path.join(root, "apps/mobile/app/(tabs)/matches.js"), "utf8");
+  assert.match(mobile, /loadMatchesForCurrentUser\(getCurrentUser, getMatches\)/);
+  assert.match(
+    mobile,
+    /accessibilityLabel="Retry loading matches"[\s\S]{0,180}onPress=\{loadMatches\}/
+  );
+  assert.doesNotMatch(mobile, /getMatches\(userId\)/);
 });

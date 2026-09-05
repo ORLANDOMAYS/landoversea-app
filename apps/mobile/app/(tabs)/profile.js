@@ -1,8 +1,18 @@
-import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, Image } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, AppState, Image } from "react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { getCurrentUser, getProfile, upsertProfile, getPhotos, uploadPhoto, deletePhoto } from "../../lib/api";
+import {
+  SIGNED_URL_REFRESH_INTERVAL_MS,
+  deletePhoto,
+  getCurrentUser,
+  getPhotos,
+  getProfile,
+  mergeRefreshedPhotoRows,
+  refreshPhotoUrls,
+  uploadPhoto,
+  upsertProfile,
+} from "../../lib/api";
 import { getAuthDestination } from "../../lib/auth-gate";
 
 export default function ProfileScreen() {
@@ -21,6 +31,23 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const [photoRefreshError, setPhotoRefreshError] = useState(null);
+  const photoRefreshInFlight = useRef(false);
+
+  const renewPhotoUrls = useCallback(async () => {
+    if (photoRefreshInFlight.current || photos.length === 0) return;
+    photoRefreshInFlight.current = true;
+    try {
+      const sourcePhotos = photos;
+      const refreshed = await refreshPhotoUrls(photos);
+      setPhotos((current) => mergeRefreshedPhotoRows(current, sourcePhotos, refreshed));
+      setPhotoRefreshError(null);
+    } catch (error) {
+      setPhotoRefreshError(error?.message || "Unable to refresh profile photos.");
+    } finally {
+      photoRefreshInFlight.current = false;
+    }
+  }, [photos]);
 
   useEffect(() => {
     (async () => {
@@ -47,6 +74,20 @@ export default function ProfileScreen() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (photos.length === 0) return undefined;
+    const timer = setInterval(() => {
+      void renewPhotoUrls();
+    }, SIGNED_URL_REFRESH_INTERVAL_MS);
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void renewPhotoUrls();
+    });
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [photos.length, renewPhotoUrls]);
 
   async function save() {
     if (!userId) return;
@@ -123,10 +164,15 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.section}>Photos</Text>
+      {photoRefreshError && (
+        <Pressable accessibilityRole="button" accessibilityLabel="Retry refreshing profile photos" onPress={renewPhotoUrls}>
+          <Text accessibilityRole="alert" style={styles.errorText}>{photoRefreshError} Tap to retry.</Text>
+        </Pressable>
+      )}
       <View style={styles.photosRow}>
         {photos.map((p) => (
           <View key={p.id}>
-            <Image source={{ uri: p.url }} style={styles.photo} accessibilityLabel="Profile photo" />
+            <Image source={{ uri: p.url }} style={styles.photo} accessibilityLabel="Profile photo" onError={renewPhotoUrls} />
             <Pressable accessibilityRole="button" accessibilityLabel="Delete profile photo" disabled={photoBusy} onPress={() => removePhoto(p.id)} style={styles.deletePhoto}><Text style={styles.deleteText}>×</Text></Pressable>
           </View>
         ))}

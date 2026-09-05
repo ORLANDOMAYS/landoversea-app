@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Plus, Trash2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +8,9 @@ import {
   getProfile,
   upsertProfile,
   getPhotos,
+  mergeRefreshedPhotoRows,
+  refreshPhotoUrls,
+  SIGNED_URL_REFRESH_INTERVAL_MS,
   uploadPhoto,
   deletePhoto,
 } from "../../../lib/api";
@@ -24,6 +27,8 @@ export default function ProfilePage() {
   const [photoBusy, setPhotoBusy] = useState<string | "upload" | null>(null);
   const [status, setStatus] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photoRefreshError, setPhotoRefreshError] = useState<string | null>(null);
+  const photoRefreshInFlight = useRef(false);
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -33,6 +38,21 @@ export default function ProfilePage() {
   const [language, setLanguage] = useState("en");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
+
+  const renewPhotoUrls = useCallback(async () => {
+    if (photoRefreshInFlight.current || photos.length === 0) return;
+    photoRefreshInFlight.current = true;
+    try {
+      const sourcePhotos = photos;
+      const refreshed = await refreshPhotoUrls(photos);
+      setPhotos((current) => mergeRefreshedPhotoRows(current, sourcePhotos, refreshed));
+      setPhotoRefreshError(null);
+    } catch (error) {
+      setPhotoRefreshError(error instanceof Error ? error.message : "Unable to refresh profile photos.");
+    } finally {
+      photoRefreshInFlight.current = false;
+    }
+  }, [photos]);
 
   useEffect(() => {
     (async () => {
@@ -62,6 +82,21 @@ export default function ProfilePage() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (photos.length === 0) return undefined;
+    const timer = window.setInterval(() => {
+      void renewPhotoUrls();
+    }, SIGNED_URL_REFRESH_INTERVAL_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void renewPhotoUrls();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [photos.length, renewPhotoUrls]);
 
   async function handleSave() {
     if (!userId) return;
@@ -141,10 +176,15 @@ export default function ProfilePage() {
       {/* Photos */}
       <div className="mb-6">
         <p className="text-sm font-medium text-gray-700 mb-2">Photos</p>
+        {photoRefreshError && (
+          <button type="button" onClick={() => void renewPhotoUrls()} className="mb-2 text-left text-sm text-red-700" role="alert">
+            {photoRefreshError} Retry refreshing photos.
+          </button>
+        )}
         <div className="grid grid-cols-3 gap-2">
           {photos.map((photo) => (
             <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
-              <img src={photo.url} alt="Profile" className="w-full h-full object-cover" />
+              <img src={photo.url} alt="Profile" className="w-full h-full object-cover" onError={() => void renewPhotoUrls()} />
               <button
                 onClick={() => handleDeletePhoto(photo.id)}
                 disabled={photoBusy !== null}
