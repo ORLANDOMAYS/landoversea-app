@@ -16,6 +16,12 @@ const hostedUpgrade = fs.readFileSync(
   path.join(root, "supabase/migrations/007_hosted_legacy_security_upgrade.sql"),
   "utf8"
 );
+const advisorHardening = fs.readFileSync(
+  path.join(root, "supabase/migrations/008_live_advisor_hardening.sql"),
+  "utf8"
+);
+const webApi = fs.readFileSync(path.join(root, "apps/web/src/lib/api.ts"), "utf8");
+const mobileApi = fs.readFileSync(path.join(root, "apps/mobile/lib/api.js"), "utf8");
 
 test("security fix is a new forward-only migration", () => {
   const migrations = fs
@@ -31,6 +37,7 @@ test("security fix is a new forward-only migration", () => {
   assert.equal(migrations[4], "005_platform_security.sql");
   assert.equal(migrations[5], "006_legacy_photo_and_coordinate_privacy.sql");
   assert.equal(migrations[6], "007_hosted_legacy_security_upgrade.sql");
+  assert.equal(migrations[7], "008_live_advisor_hardening.sql");
 });
 
 test("self verification and premium upgrade are not client executable", () => {
@@ -179,4 +186,149 @@ test("all legacy coach policies are removed before moderated policies are instal
   assert.match(migration, /coaches_read_self[\s\S]*auth\.uid\(\) = owner_id/i);
   assert.match(migration, /before insert or update on public\.coaches/i);
   assert.match(migration, /new\.owner_id := auth\.uid\(\)/i);
+});
+
+test("advisor hardening gives authenticated clients only the intended match RPC", () => {
+  assert.match(webApi, /\.rpc\("ensure_match"/);
+  assert.match(mobileApi, /\.rpc\("ensure_match"/);
+  assert.match(
+    advisorHardening,
+    /revoke all on function public\.ensure_match\(uuid\)[\s\S]*from public, anon, authenticated[\s\S]*grant execute on function public\.ensure_match\(uuid\) to authenticated/i
+  );
+
+  const authenticatedGrants = [
+    ...advisorHardening.matchAll(
+      /grant execute on function\s+([^\n]+?)\s+to authenticated/gi
+    ),
+  ].map((match) => match[1].trim());
+  assert.deepEqual(authenticatedGrants, ["public.ensure_match(uuid)"]);
+
+  for (const signature of [
+    "ensure_profile()",
+    "check_match()",
+    "protect_privileged_columns()",
+    "verify_profile(uuid)",
+    "upgrade_to_premium()",
+    "enforce_photo_write()",
+    "enforce_location_write()",
+    "protect_coach_moderation()",
+  ]) {
+    assert.match(
+      advisorHardening,
+      new RegExp(
+        `revoke all on function public\\.${signature.replace(/[()]/g, "\\$&")}\\s+from public, anon, authenticated`,
+        "i"
+      )
+    );
+  }
+});
+
+test("advisor hardening fixes application function search paths and future defaults", () => {
+  assert.match(
+    advisorHardening,
+    /alter default privileges[\s\S]*revoke execute on functions from public/i
+  );
+  assert.match(advisorHardening, /where n\.nspname = 'public'/i);
+  assert.match(advisorHardening, /d\.deptype = 'e'/i);
+  assert.match(
+    advisorHardening,
+    /alter function %s set search_path = pg_catalog, public/i
+  );
+  assert.match(
+    advisorHardening,
+    /target_function\.prosecdef[\s\S]*revoke all on function %s from public, anon, authenticated/i
+  );
+});
+
+test("advisor hardening replaces sensitive-table policies with canonical authenticated policies", () => {
+  const appPolicySection = advisorHardening.slice(
+    advisorHardening.indexOf("alter table public.profiles enable row level security"),
+    advisorHardening.indexOf("-- Remove anonymous table access")
+  );
+  for (const table of [
+    "profiles",
+    "photos",
+    "swipes",
+    "matches",
+    "messages",
+    "user_locations",
+    "coaches",
+  ]) {
+    assert.match(advisorHardening, new RegExp(`'${table}'`, "i"));
+    assert.match(
+      advisorHardening,
+      /drop policy if exists %I on public\.%I/i
+    );
+  }
+  assert.doesNotMatch(
+    appPolicySection,
+    /create policy [\s\S]*?\bto (?:anon|public)\b/i
+  );
+  assert.match(
+    advisorHardening,
+    /revoke all on table[\s\S]*public\.coaches[\s\S]*from public, anon/i
+  );
+  assert.match(
+    advisorHardening,
+    /create policy coaches_read_allowed[\s\S]*verified and approved and active[\s\S]*or \(select auth\.uid\(\)\) = owner_id/i
+  );
+});
+
+test("advisor hardening preserves authenticated product policy behavior with init-plan auth lookups", () => {
+  for (const policy of [
+    "profiles_read_authenticated",
+    "profiles_insert_self",
+    "photos_read_authenticated",
+    "photos_insert_self",
+    "swipes_read_participant",
+    "swipes_insert_self",
+    "matches_read_participant",
+    "messages_read_participant",
+    "messages_insert_self",
+    "locations_read_self",
+    "locations_insert_self",
+    "coaches_insert_self_unapproved",
+  ]) {
+    assert.match(
+      advisorHardening,
+      new RegExp(`create policy ${policy}[\\s\\S]*?\\(select auth\\.uid\\(\\)\\)`, "i")
+    );
+  }
+  assert.match(
+    advisorHardening,
+    /grant select on public\.matches to authenticated/i
+  );
+  assert.doesNotMatch(
+    advisorHardening,
+    /grant (?:insert|update|delete)[^;]*public\.matches to authenticated/i
+  );
+  assert.match(
+    advisorHardening,
+    /create or replace function public\.enforce_location_write\(\)[\s\S]*set search_path = pg_catalog, public/i
+  );
+  assert.match(
+    advisorHardening,
+    /pg_advisory_xact_lock[\s\S]*Premium is required for saved locations[\s\S]*at most three saved locations/i
+  );
+  assert.doesNotMatch(
+    advisorHardening,
+    /create policy locations_insert_self[\s\S]*select count\(\*\)[\s\S]*from public\.user_locations/i
+  );
+});
+
+test("advisor hardening adds indexes for known uncovered foreign-key lookups", () => {
+  for (const index of [
+    "photos_user_id_idx",
+    "swipes_swiped_id_swiper_id_idx",
+    "matches_user2_id_user1_id_idx",
+    "messages_match_id_created_at_idx",
+    "messages_sender_id_idx",
+    "user_locations_user_id_idx",
+    "coaches_owner_id_idx",
+  ]) {
+    assert.match(
+      advisorHardening,
+      new RegExp(`create index if not exists ${index}`, "i")
+    );
+  }
 });
