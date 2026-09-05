@@ -99,6 +99,35 @@ test("signed photo rows can be renewed before their current URL expires", async 
   );
 });
 
+test("one inaccessible photo cannot block valid photos during initial resolution", async () => {
+  const storage = {
+    from(bucket) {
+      assert.equal(bucket, "photos");
+      return {
+        async createSignedUrl(objectPath) {
+          if (objectPath.endsWith("/missing.jpg")) {
+            return { data: null, error: new Error("object unavailable") };
+          }
+          return {
+            data: {
+              signedUrl: `https://project.supabase.co/storage/v1/object/sign/photos/${objectPath}?token=initial`,
+            },
+            error: null,
+          };
+        },
+      };
+    },
+  };
+
+  const resolved = await storageHelpers.resolvePhotoRows(storage, [
+    { id: "photo-good", user_id: "user-123", url: "user-123/good.jpg" },
+    { id: "photo-missing", user_id: "user-123", url: "user-123/missing.jpg" },
+  ]);
+
+  assert.deepEqual(resolved.map((photo) => photo.id), ["photo-good"]);
+  assert.match(resolved[0].url, /token=initial$/);
+});
+
 test("one inaccessible photo cannot block renewal of valid signed URLs", async () => {
   const storage = {
     from(bucket) {

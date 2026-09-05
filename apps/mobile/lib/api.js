@@ -11,6 +11,7 @@ const {
   mergeRefreshedProfilePhotos,
   refreshPhotoRows,
   resolvePhotoRows,
+  resolvePhotoUrl,
   storagePathFromValue,
 } = require("../../../lib/photo-storage.cjs");
 
@@ -122,8 +123,7 @@ export async function uploadPhoto(userId, uri, position) {
     await supabase.storage.from(PHOTO_BUCKET).remove([path]);
     throw error;
   }
-  const [resolved] = await resolvePhotoRows(supabase.storage, [data]);
-  return resolved;
+  return { ...data, url: await resolvePhotoUrl(supabase.storage, data.url) };
 }
 
 export async function deletePhoto(photoId) {

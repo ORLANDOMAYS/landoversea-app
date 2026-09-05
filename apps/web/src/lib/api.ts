@@ -22,6 +22,7 @@ const {
   mergeRefreshedProfilePhotos,
   refreshPhotoRows,
   resolvePhotoRows,
+  resolvePhotoUrl,
   storagePathFromValue,
 }: {
   ALLOWED_PHOTO_MIME_TYPES: Set<string>;
@@ -41,6 +42,7 @@ const {
     rows: Photo[]
   ) => Promise<{ rows: Photo[]; failedCount: number }>;
   resolvePhotoRows: (storage: typeof supabase.storage, rows: Photo[]) => Promise<Photo[]>;
+  resolvePhotoUrl: (storage: typeof supabase.storage, value: string) => Promise<string>;
   storagePathFromValue: (value: string) => string | null;
 } = require("../../../../lib/photo-storage.cjs");
 
@@ -149,8 +151,7 @@ export async function uploadPhoto(
     await supabase.storage.from(PHOTO_BUCKET).remove([path]);
     throw error;
   }
-  const [resolved] = await resolvePhotoRows(supabase.storage, [data]);
-  return resolved;
+  return { ...data, url: await resolvePhotoUrl(supabase.storage, data.url) };
 }
 
 export async function deletePhoto(photoId: string): Promise<void> {
