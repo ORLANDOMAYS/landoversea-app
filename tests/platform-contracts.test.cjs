@@ -99,6 +99,37 @@ test("signed photo rows can be renewed before their current URL expires", async 
   );
 });
 
+test("one inaccessible photo cannot block renewal of valid signed URLs", async () => {
+  const storage = {
+    from(bucket) {
+      assert.equal(bucket, "photos");
+      return {
+        async createSignedUrl(objectPath) {
+          if (objectPath.endsWith("/inaccessible.jpg")) {
+            return { data: null, error: new Error("object unavailable") };
+          }
+          return {
+            data: {
+              signedUrl: `https://project.supabase.co/storage/v1/object/sign/photos/${objectPath}?token=renewed`,
+            },
+            error: null,
+          };
+        },
+      };
+    },
+  };
+  const sourceRows = [
+    { id: "photo-good", user_id: "user-123", url: "user-123/good.jpg" },
+    { id: "photo-bad", user_id: "user-123", url: "user-123/inaccessible.jpg" },
+  ];
+
+  const result = await storageHelpers.refreshPhotoRows(storage, sourceRows);
+
+  assert.equal(result.failedCount, 1);
+  assert.match(result.rows[0].url, /token=renewed$/);
+  assert.equal(result.rows[1], sourceRows[1]);
+});
+
 test("stale photo renewal cannot overwrite a newer discovery result", () => {
   const source = [{
     id: "profile-1",
@@ -180,6 +211,7 @@ test("web and mobile photo APIs store paths, sign reads, cap uploads, and remove
     assert.match(source, /resolvePhotoRows/);
     assert.match(source, /refreshPhotoUrls/);
     assert.match(source, /refreshProfilePhotoUrls/);
+    assert.match(source, /refreshPhotoRows/);
     assert.match(source, /PHOTO_LIMIT/);
     assert.match(source, /isOwnerPhotoPath/);
     assert.match(source, /\.remove\(\[path\]\)/);
@@ -199,6 +231,7 @@ test("profile and discovery views renew signed photos before expiry and retry br
     assert.match(source, /SIGNED_URL_REFRESH_INTERVAL_MS/);
     assert.match(source, /setInterval/);
     assert.match(source, /onError=/);
+    assert.match(source, /failedCount/);
   }
 });
 

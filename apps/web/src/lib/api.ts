@@ -20,6 +20,7 @@ const {
   isOwnerPhotoPath,
   mergeRefreshedPhotoRows,
   mergeRefreshedProfilePhotos,
+  refreshPhotoRows,
   resolvePhotoRows,
   storagePathFromValue,
 }: {
@@ -35,6 +36,10 @@ const {
     sourceProfiles: ProfileWithPhotos[],
     refreshedProfiles: ProfileWithPhotos[]
   ) => ProfileWithPhotos[];
+  refreshPhotoRows: (
+    storage: typeof supabase.storage,
+    rows: Photo[]
+  ) => Promise<{ rows: Photo[]; failedCount: number }>;
   resolvePhotoRows: (storage: typeof supabase.storage, rows: Photo[]) => Promise<Photo[]>;
   storagePathFromValue: (value: string) => string | null;
 } = require("../../../../lib/photo-storage.cjs");
@@ -91,20 +96,26 @@ export async function getPhotos(userId: string): Promise<Photo[]> {
   return resolvePhotoRows(supabase.storage, data ?? []);
 }
 
-export async function refreshPhotoUrls(photos: Photo[]): Promise<Photo[]> {
-  return resolvePhotoRows(supabase.storage, photos ?? []);
+export async function refreshPhotoUrls(
+  photos: Photo[]
+): Promise<{ photos: Photo[]; failedCount: number }> {
+  const result = await refreshPhotoRows(supabase.storage, photos ?? []);
+  return { photos: result.rows, failedCount: result.failedCount };
 }
 
 export async function refreshProfilePhotoUrls(
   profiles: ProfileWithPhotos[]
-): Promise<ProfileWithPhotos[]> {
+): Promise<{ profiles: ProfileWithPhotos[]; failedCount: number }> {
   const photos = (profiles ?? []).flatMap((profile) => profile.photos ?? []);
-  const refreshed = await refreshPhotoUrls(photos);
-  const refreshedById = new Map(refreshed.map((photo) => [photo.id, photo]));
-  return (profiles ?? []).map((profile) => ({
-    ...profile,
-    photos: (profile.photos ?? []).map((photo) => refreshedById.get(photo.id) ?? photo),
-  }));
+  const result = await refreshPhotoUrls(photos);
+  const refreshedById = new Map(result.photos.map((photo) => [photo.id, photo]));
+  return {
+    profiles: (profiles ?? []).map((profile) => ({
+      ...profile,
+      photos: (profile.photos ?? []).map((photo) => refreshedById.get(photo.id) ?? photo),
+    })),
+    failedCount: result.failedCount,
+  };
 }
 
 export async function uploadPhoto(

@@ -60,9 +60,11 @@ export default function SwipePage() {
     photoRefreshInFlight.current = true;
     try {
       const sourceProfiles = profiles;
-      const refreshed = await refreshProfilePhotoUrls(profiles);
+      const { profiles: refreshed, failedCount } = await refreshProfilePhotoUrls(profiles);
       setProfiles((current) => mergeRefreshedProfilePhotos(current, sourceProfiles, refreshed));
-      setPhotoRefreshError(null);
+      setPhotoRefreshError(
+        failedCount > 0 ? `${failedCount} profile photo${failedCount === 1 ? "" : "s"} could not be refreshed.` : null
+      );
     } catch (err) {
       setPhotoRefreshError(err instanceof Error ? err.message : "Unable to refresh profile photos.");
     } finally {

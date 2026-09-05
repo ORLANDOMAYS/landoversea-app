@@ -9,6 +9,7 @@ const {
   isOwnerPhotoPath,
   mergeRefreshedPhotoRows,
   mergeRefreshedProfilePhotos,
+  refreshPhotoRows,
   resolvePhotoRows,
   storagePathFromValue,
 } = require("../../../lib/photo-storage.cjs");
@@ -70,17 +71,21 @@ export async function getPhotos(userId) {
 
 export async function refreshPhotoUrls(photos) {
   if (!supabase) throw new Error("Supabase is not configured.");
-  return resolvePhotoRows(supabase.storage, photos ?? []);
+  const result = await refreshPhotoRows(supabase.storage, photos ?? []);
+  return { photos: result.rows, failedCount: result.failedCount };
 }
 
 export async function refreshProfilePhotoUrls(profiles) {
   const photos = (profiles ?? []).flatMap((profile) => profile.photos ?? []);
-  const refreshed = await refreshPhotoUrls(photos);
-  const refreshedById = new Map(refreshed.map((photo) => [photo.id, photo]));
-  return (profiles ?? []).map((profile) => ({
-    ...profile,
-    photos: (profile.photos ?? []).map((photo) => refreshedById.get(photo.id) ?? photo),
-  }));
+  const result = await refreshPhotoUrls(photos);
+  const refreshedById = new Map(result.photos.map((photo) => [photo.id, photo]));
+  return {
+    profiles: (profiles ?? []).map((profile) => ({
+      ...profile,
+      photos: (profile.photos ?? []).map((photo) => refreshedById.get(photo.id) ?? photo),
+    })),
+    failedCount: result.failedCount,
+  };
 }
 
 export async function uploadPhoto(userId, uri, position) {

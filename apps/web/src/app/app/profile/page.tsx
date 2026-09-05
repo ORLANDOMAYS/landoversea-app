@@ -44,9 +44,11 @@ export default function ProfilePage() {
     photoRefreshInFlight.current = true;
     try {
       const sourcePhotos = photos;
-      const refreshed = await refreshPhotoUrls(photos);
+      const { photos: refreshed, failedCount } = await refreshPhotoUrls(photos);
       setPhotos((current) => mergeRefreshedPhotoRows(current, sourcePhotos, refreshed));
-      setPhotoRefreshError(null);
+      setPhotoRefreshError(
+        failedCount > 0 ? `${failedCount} profile photo${failedCount === 1 ? "" : "s"} could not be refreshed.` : null
+      );
     } catch (error) {
       setPhotoRefreshError(error instanceof Error ? error.message : "Unable to refresh profile photos.");
     } finally {
