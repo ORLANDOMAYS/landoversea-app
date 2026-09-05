@@ -1,64 +1,52 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Linking from "expo-linking";
 import { supabase } from "../lib/supabase";
+import { getAuthDestination } from "../lib/auth-gate";
+import { parseAuthCallbackUrl } from "../lib/auth-flow";
 
 export default function RootLayout() {
   const router = useRouter();
+  const handlingLink = useRef(false);
 
   useEffect(() => {
-    if (!supabase) return;
-
-    // Handle deep link auth (magic link from email)
     function handleDeepLink(event) {
       const url = event.url || event;
       if (!url) return;
-      const parsed = Linking.parse(url);
-      // Extract tokens from the URL hash/params
-      const accessToken =
-        parsed.queryParams?.access_token ||
-        parsed.queryParams?.token;
-      const refreshToken = parsed.queryParams?.refresh_token;
-
-      // PKCE flow: Supabase v2 sends a `code` param that must be exchanged
-      const code = parsed.queryParams?.code;
-      if (code) {
-        supabase.auth
-          .exchangeCodeForSession(code)
-          .catch((err) => console.warn("Deep link code exchange failed:", err));
-      } else if (accessToken && refreshToken) {
-        // Implicit flow fallback
-        supabase.auth
-          .setSession({ access_token: accessToken, refresh_token: refreshToken })
-          .catch((err) => console.warn("Deep link setSession failed:", err));
+      const parsed = parseAuthCallbackUrl(url);
+      if (parsed.kind !== "invalid") {
+        handlingLink.current = true;
+        router.replace({
+          pathname: "/auth-callback",
+          params: { callbackUrl: url },
+        });
       }
     }
 
-    // Check if app was opened by a deep link
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink({ url });
+    Linking.getInitialURL().then(async (url) => {
+      if (url && parseAuthCallbackUrl(url).kind !== "invalid") {
+        handleDeepLink(url);
+        return;
+      }
+      const result = await getAuthDestination();
+      if (!handlingLink.current && result.destination !== "/") {
+        router.replace(result.destination);
+      }
     });
-
-    // Listen for deep links while the app is open
     const sub = Linking.addEventListener("url", handleDeepLink);
 
-    // Listen for Supabase auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "SIGNED_IN" && session) {
-          router.replace("/(tabs)/discover");
-        } else if (event === "SIGNED_OUT") {
-          router.replace("/");
-        }
-      }
-    );
+    const subscription = supabase
+      ? supabase.auth.onAuthStateChange((event) => {
+          if (event === "SIGNED_OUT") router.replace("/");
+        }).data.subscription
+      : null;
 
     return () => {
       sub.remove();
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   return (
     <>

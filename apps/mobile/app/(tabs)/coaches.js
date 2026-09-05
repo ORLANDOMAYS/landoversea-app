@@ -7,10 +7,19 @@ export default function CoachesScreen() {
   const router = useRouter();
   const [coaches, setCoaches] = useState([]);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    getCoaches().then(setCoaches);
-  }, []);
+  function loadCoaches() {
+    setLoading(true);
+    setError(null);
+    getCoaches()
+      .then(setCoaches)
+      .catch((err) => setError(err?.message || "Unable to load coaches."))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(loadCoaches, []);
 
   const filtered = coaches.filter(
     (c) =>
@@ -28,6 +37,8 @@ export default function CoachesScreen() {
     return (
       <Pressable
         style={styles.coachCard}
+        accessibilityRole="button"
+        accessibilityLabel={`View coach ${item.display_name}`}
         onPress={() =>
           router.push(`/coach-detail?coachId=${item.id}`)
         }
@@ -36,7 +47,6 @@ export default function CoachesScreen() {
         <View style={styles.coachInfo}>
           <View style={styles.nameRow}>
             <Text style={styles.coachName}>{item.display_name}</Text>
-            {item.verified && <Text style={styles.verified}>✓</Text>}
           </View>
           <Text style={styles.coachMeta}>
             ⭐ {item.rating > 0 ? item.rating.toFixed(1) : "New"} · {item.total_sessions} sessions
@@ -61,7 +71,7 @@ export default function CoachesScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Dating Coaches</Text>
         <Text style={styles.subtitle}>
-          Get personalized help from verified dating experts
+          Browse approved dating coach profiles
         </Text>
       </View>
 
@@ -71,9 +81,21 @@ export default function CoachesScreen() {
         onChangeText={setSearch}
         placeholder="Search coaches by name or specialty..."
         placeholderTextColor="#999"
+        accessibilityLabel="Search coaches"
       />
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>Loading coaches…</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.empty}>
+          <Text accessibilityRole="alert" style={styles.errorText}>{error}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Retry loading coaches" style={styles.retryBtn} onPress={loadCoaches}>
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
+        </View>
+      ) : filtered.length === 0 ? (
         <View style={styles.empty}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>🎓</Text>
           <Text style={styles.emptyTitle}>No coaches found</Text>
@@ -110,6 +132,9 @@ const styles = StyleSheet.create({
   empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   emptyTitle: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
   emptyText: { fontSize: 16, color: "#666" },
+  errorText: { fontSize: 16, color: "#b91c1c", textAlign: "center", marginBottom: 16 },
+  retryBtn: { backgroundColor: "#e11d48", borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
+  retryText: { color: "#fff", fontWeight: "700" },
   coachCard: {
     flexDirection: "row",
     padding: 12,
@@ -121,8 +146,7 @@ const styles = StyleSheet.create({
   coachInfo: { flex: 1 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   coachName: { fontSize: 17, fontWeight: "700" },
-  verified: { fontSize: 14, color: "#3b82f6", fontWeight: "700" },
-  coachMeta: { fontSize: 13, color: "#888", marginTop: 2 },
+  coachMeta: { fontSize: 13, color: "#595959", marginTop: 2 },
   tagsRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 },
   tag: {
     backgroundColor: "#fef2f2",

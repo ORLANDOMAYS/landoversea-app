@@ -9,8 +9,6 @@ export interface Profile {
   language: string;
   verified: boolean;
   premium: boolean;
-  latitude: number | null;
-  longitude: number | null;
   city: string | null;
   country: string | null;
   created_at: string;
@@ -52,8 +50,8 @@ export interface Message {
 export interface UserLocation {
   id: string;
   user_id: string;
-  city: string;
-  country: string;
+  city: string | null;
+  country: string | null;
   latitude: number | null;
   longitude: number | null;
   active: boolean;

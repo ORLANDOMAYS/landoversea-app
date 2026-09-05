@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Image, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
-import { supabase } from "../lib/supabase";
+import * as Linking from "expo-linking";
+import { getAuthDestination } from "../lib/auth-gate";
+import { parseAuthCallbackUrl } from "../lib/auth-flow";
 
 const { width } = Dimensions.get("window");
 
@@ -10,15 +12,13 @@ export default function LandingScreen() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!supabase) {
-      setChecking(false);
-      return;
-    }
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace("/(tabs)/discover");
+    Linking.getInitialURL().then(async (url) => {
+      if (url && parseAuthCallbackUrl(url).kind !== "invalid") return;
+      const { destination } = await getAuthDestination();
+      if (destination !== "/") router.replace(destination);
       else setChecking(false);
     });
-  }, []);
+  }, [router]);
 
   if (checking) {
     return (
@@ -42,17 +42,17 @@ export default function LandingScreen() {
       />
       <Text style={styles.appName}>LandOverSea</Text>
       <Text style={styles.tagline}>
-        Find love across borders.{"\n"}Real-time translation. Real connections.
+        Find love across borders.{"\n"}Original messages. Real connections.
       </Text>
 
       <View style={styles.features}>
         <View style={styles.featureRow}>
           <Text style={styles.featureIcon}>🌐</Text>
-          <Text style={styles.featureText}>19 languages translated live</Text>
+          <Text style={styles.featureText}>Cross-border matching and chat</Text>
         </View>
         <View style={styles.featureRow}>
-          <Text style={styles.featureIcon}>✓</Text>
-          <Text style={styles.featureText}>Facial verification for safety</Text>
+          <Text style={styles.featureIcon}>🔒</Text>
+          <Text style={styles.featureText}>Private profile photo storage</Text>
         </View>
         <View style={styles.featureRow}>
           <Text style={styles.featureIcon}>📍</Text>

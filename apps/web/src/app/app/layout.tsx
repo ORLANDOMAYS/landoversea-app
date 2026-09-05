@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { MessageCircle, User, Settings, Flame } from "lucide-react";
-import { supabase } from "../../lib/supabase";
+import { getSupabase } from "../../lib/supabase";
+import { getAuthDestination } from "../../lib/auth-gate";
 
 const NAV_ITEMS = [
   { href: "/app", icon: Flame, label: "Discover" },
@@ -16,16 +17,54 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
+    let active = true;
+    let unsubscribe = () => {};
+
+    getAuthDestination().then((result) => {
+      if (!active) return;
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+      const current = `${pathname}${window.location.search}`;
+      if (
+        result.destination !== "/app" &&
+        !current.startsWith("/app/profile")
+      ) {
+        router.replace(result.destination);
+      } else if (result.destination === "/auth") {
         router.replace("/auth");
       } else {
         setLoading(false);
       }
     });
-  }, [router]);
+
+    try {
+      const { data } = getSupabase().auth.onAuthStateChange((event) => {
+        if (event === "SIGNED_OUT") router.replace("/auth");
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+    } catch {
+      // Initialization above renders the explicit configuration error.
+    }
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [pathname, router]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="max-w-md text-center text-red-700">{error}</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -58,6 +97,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <button
               key={item.href}
               onClick={() => router.push(item.href)}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${
                 isActive ? "text-pink-600" : "text-gray-400 hover:text-gray-600"
               }`}

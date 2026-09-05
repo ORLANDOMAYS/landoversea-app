@@ -11,7 +11,7 @@ import {
   getProfile,
   getMatches,
 } from "../../../lib/api";
-import { translateText } from "../../../lib/translate";
+import { restoreFailedDraft } from "../../../lib/dating-state";
 import type { Message, Profile, MatchWithProfile } from "../../../lib/types";
 import { LANGUAGES } from "../../../lib/types";
 
@@ -27,13 +27,23 @@ function ChatContent() {
   const [otherProfile, setOtherProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState("connecting");
+  const [subscriptionKey, setSubscriptionKey] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!matchId) return;
-
-    getCurrentUser().then(async (user) => {
-      if (!user) return;
+  const loadChat = async () => {
+    if (!matchId) {
+      setLoading(false);
+      setError("No chat selected.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const user = await getCurrentUser();
+      if (!user) throw new Error("Please sign in to open this chat.");
       setUserId(user.id);
 
       const [profile, msgs, matches] = await Promise.all([
@@ -46,29 +56,40 @@ function ChatContent() {
       setMessages(msgs);
 
       const match = matches.find((m: MatchWithProfile) => m.id === matchId);
-      if (match?.profile) {
-        setOtherProfile(match.profile);
-      }
-
+      if (!match) throw new Error("This match is unavailable or you do not have access.");
+      setOtherProfile(match.profile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load chat.");
+    } finally {
       setLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    void loadChat();
   }, [matchId]);
 
   // Real-time subscription
   useEffect(() => {
     if (!matchId || !userId) return;
 
-    const channel = subscribeToMessages(matchId, (newMsg) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
-      });
-    });
+    setConnectionStatus("connecting");
+    const channel = subscribeToMessages(
+      matchId,
+      (newMsg) => {
+        setMessages((prev) => prev.some((m) => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+      },
+      (status) => {
+        if (status === "SUBSCRIBED") setConnectionStatus("connected");
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setConnectionStatus("disconnected");
+        else setConnectionStatus("connecting");
+      }
+    );
 
     return () => {
       channel.unsubscribe();
     };
-  }, [matchId, userId]);
+  }, [matchId, userId, subscriptionKey]);
 
   // Auto-scroll
   useEffect(() => {
@@ -78,25 +99,27 @@ function ChatContent() {
   async function handleSend() {
     if (!input.trim() || !userId || !matchId || sending) return;
     setSending(true);
+    setSendError(null);
 
     const myLang = myProfile?.language ?? "en";
-    const otherLang = otherProfile?.language ?? "en";
     const body = input.trim();
 
-    let translated: string | undefined;
-    if (myLang !== otherLang) {
-      translated = await translateText(body, myLang, otherLang);
-    }
-
     setInput("");
-    await sendMessage(matchId, userId, body, myLang, translated);
-    setSending(false);
+    try {
+      const sent = await sendMessage(matchId, userId, body, myLang);
+      if (sent) setMessages((prev) => prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]);
+    } catch (err) {
+      setInput((current) => restoreFailedDraft(current, body));
+      setSendError(err instanceof Error ? err.message : "Message failed to send. Please retry.");
+    } finally {
+      setSending(false);
+    }
   }
 
   if (!matchId) {
     return (
       <div className="flex items-center justify-center h-[70vh]">
-        <p className="text-gray-500">No chat selected</p>
+        <p role="alert" className="text-gray-500">No chat selected</p>
       </div>
     );
   }
@@ -108,12 +131,15 @@ function ChatContent() {
       </div>
     );
   }
+  if (error) {
+    return <div className="flex h-[70vh] items-center justify-center"><div role="alert" className="text-center"><p className="mb-4 text-red-700">{error}</p><button onClick={() => void loadChat()} className="rounded-xl bg-rose-600 px-4 py-2 text-white">Retry</button></div></div>;
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] max-w-lg mx-auto">
       {/* Chat header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200">
-        <button onClick={() => router.push("/app/matches")} className="text-gray-500 hover:text-gray-700">
+        <button aria-label="Back to matches" onClick={() => router.push("/app/matches")} className="text-gray-500 hover:text-gray-700">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <img
@@ -133,6 +159,15 @@ function ChatContent() {
             </p>
           )}
         </div>
+      </div>
+      {connectionStatus !== "connected" && (
+        <div role="status" className="flex items-center justify-center gap-2 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {connectionStatus === "connecting" ? "Connecting to live messages…" : "Live messages disconnected."}
+          {connectionStatus === "disconnected" && <button className="underline" onClick={() => setSubscriptionKey((key) => key + 1)}>Reconnect</button>}
+        </div>
+      )}
+      <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900">
+        Automatic translation is currently unavailable. Messages are sent in their original language.
       </div>
 
       {/* Messages */}
@@ -192,17 +227,20 @@ function ChatContent() {
 
       {/* Input */}
       <div className="px-4 py-3 bg-white border-t border-gray-200">
+        {sendError && <p role="alert" className="mb-2 text-sm text-red-700">{sendError}</p>}
         <div className="flex items-center gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="Type a message..."
+            aria-label="Message"
             className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || sending}
+            aria-label={sending ? "Sending message" : "Send message"}
             className="w-10 h-10 rounded-full bg-rose-600 flex items-center justify-center text-white hover:bg-rose-700 transition disabled:opacity-50"
           >
             <Send className="w-4 h-4" />

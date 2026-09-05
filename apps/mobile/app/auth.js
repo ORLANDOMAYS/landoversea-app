@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, Image } from "react-native";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
-import { supabase } from "../lib/supabase";
+import { supabase, supabaseConfigurationError } from "../lib/supabase";
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -10,7 +10,11 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
 
   async function sendOtp() {
-    if (!supabase || !email) return;
+    if (!email || loading) return;
+    if (!supabase) {
+      Alert.alert("Authentication unavailable", supabaseConfigurationError);
+      return;
+    }
     setLoading(true);
     const redirectUrl = Linking.createURL("/auth-callback");
     const { error } = await supabase.auth.signInWithOtp({

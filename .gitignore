@@ -10,3 +10,4 @@ dist/
 *.mobileprovision
 .expo/
 web-build/
+*.tsbuildinfo

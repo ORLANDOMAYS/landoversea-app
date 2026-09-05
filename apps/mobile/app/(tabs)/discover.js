@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { View, Text, Image, Pressable, StyleSheet, Dimensions, Alert } from "react-native";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { View, Text, Image, Pressable, StyleSheet, Dimensions, Alert, AppState, TextInput } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
@@ -8,7 +8,16 @@ import Animated, {
   withTiming,
   runOnJS,
 } from "react-native-reanimated";
-import { getCurrentUser, getDiscoverProfiles, recordSwipe, checkNewMatch } from "../../lib/api";
+import {
+  SIGNED_URL_REFRESH_INTERVAL_MS,
+  checkNewMatch,
+  getCurrentUser,
+  getDiscoverProfiles,
+  mergeRefreshedProfilePhotos,
+  recordSwipe,
+  refreshProfilePhotoUrls,
+} from "../../lib/api";
+import { nextSwipeState } from "../../lib/dating-state";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
@@ -18,17 +27,74 @@ export default function DiscoverScreen() {
   const [profiles, setProfiles] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swiping, setSwiping] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [photoRefreshError, setPhotoRefreshError] = useState(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({ minAge: "18", maxAge: "120", gender: "", location: "" });
+  const [appliedFilters, setAppliedFilters] = useState({ minAge: "18", maxAge: "120", gender: "", location: "" });
 
   const translateX = useSharedValue(0);
+  const photoRefreshInFlight = useRef(false);
 
-  useEffect(() => {
-    getCurrentUser().then((user) => {
+  const loadProfiles = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const user = await getCurrentUser();
       if (user) {
         setUserId(user.id);
-        getDiscoverProfiles(user.id).then(setProfiles);
+        const result = await getDiscoverProfiles(user.id, {
+          minAge: appliedFilters.minAge ? Number(appliedFilters.minAge) : undefined,
+          maxAge: appliedFilters.maxAge ? Number(appliedFilters.maxAge) : undefined,
+          gender: appliedFilters.gender || undefined,
+          location: appliedFilters.location || undefined,
+        });
+        setProfiles(result);
+        setCurrentIndex(0);
+        setPhotoRefreshError(null);
+      } else {
+        setUserId(null);
       }
+    } catch (err) {
+      setError(err?.message || "Unable to load profiles.");
+    } finally {
+      setLoading(false);
+    }
+  }, [appliedFilters]);
+
+  const renewPhotoUrls = useCallback(async () => {
+    if (photoRefreshInFlight.current || profiles.length === 0) return;
+    photoRefreshInFlight.current = true;
+    try {
+      const sourceProfiles = profiles;
+      const { profiles: refreshed, failedCount } = await refreshProfilePhotoUrls(profiles);
+      setProfiles((current) => mergeRefreshedProfilePhotos(current, sourceProfiles, refreshed));
+      setPhotoRefreshError(
+        failedCount > 0 ? `${failedCount} profile photo${failedCount === 1 ? "" : "s"} could not be refreshed.` : null
+      );
+    } catch (err) {
+      setPhotoRefreshError(err?.message || "Unable to refresh profile photos.");
+    } finally {
+      photoRefreshInFlight.current = false;
+    }
+  }, [profiles]);
+
+  useEffect(() => { loadProfiles(); }, [loadProfiles]);
+
+  useEffect(() => {
+    if (profiles.length === 0) return undefined;
+    const timer = setInterval(() => {
+      void renewPhotoUrls();
+    }, SIGNED_URL_REFRESH_INTERVAL_MS);
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void renewPhotoUrls();
     });
-  }, []);
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [profiles.length, renewPhotoUrls]);
 
   const handleSwipe = useCallback(
     async (direction) => {
@@ -45,9 +111,12 @@ export default function DiscoverScreen() {
             Alert.alert("It's a Match!", `You matched with ${profile.display_name || "someone"}!`);
           }
         }
-      } finally {
-        setCurrentIndex((prev) => prev + 1);
+        setCurrentIndex((prev) => nextSwipeState(prev, true));
         translateX.value = 0;
+      } catch (err) {
+        translateX.value = withSpring(0);
+        setError(err?.message || "Swipe could not be saved. Please retry.");
+      } finally {
         setSwiping(false);
       }
     },
@@ -79,6 +148,10 @@ export default function DiscoverScreen() {
 
   const currentProfile = profiles[currentIndex];
 
+  if (loading) {
+    return <View style={styles.center}><Text style={styles.emptyText}>Finding people near you…</Text></View>;
+  }
+
   if (!userId) {
     return (
       <View style={styles.center}>
@@ -87,12 +160,17 @@ export default function DiscoverScreen() {
     );
   }
 
+  if (error && !currentProfile) {
+    return <View style={styles.center}><Text accessibilityRole="alert" style={styles.errorText}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Retry loading profiles" style={styles.retryBtn} onPress={loadProfiles}><Text style={styles.retryText}>Retry</Text></Pressable></View>;
+  }
+
   if (!currentProfile) {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyEmoji}>🌊</Text>
         <Text style={styles.emptyTitle}>No more profiles</Text>
         <Text style={styles.emptyText}>Check back later for new people!</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Refresh profiles" style={styles.retryBtn} onPress={loadProfiles}><Text style={styles.retryText}>Refresh</Text></Pressable>
       </View>
     );
   }
@@ -103,16 +181,35 @@ export default function DiscoverScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Discovery filters" accessibilityState={{ expanded: filtersOpen }} style={styles.filterToggle} onPress={() => setFiltersOpen((open) => !open)}>
+        <Text style={styles.filterToggleText}>Filters</Text>
+      </Pressable>
+      {filtersOpen && (
+        <View style={styles.filters}>
+          <View style={styles.filterRow}>
+            <TextInput accessibilityLabel="Minimum age" keyboardType="numeric" value={filters.minAge} onChangeText={(value) => setFilters({ ...filters, minAge: value })} placeholder="Min age" style={styles.filterInput} />
+            <TextInput accessibilityLabel="Maximum age" keyboardType="numeric" value={filters.maxAge} onChangeText={(value) => setFilters({ ...filters, maxAge: value })} placeholder="Max age" style={styles.filterInput} />
+          </View>
+          <TextInput accessibilityLabel="Location filter" value={filters.location} onChangeText={(value) => setFilters({ ...filters, location: value })} placeholder="City or country" style={styles.filterInput} />
+          <View style={styles.filterRow}>
+            {["", "male", "female", "non-binary"].map((value) => <Pressable key={value || "all"} accessibilityRole="radio" accessibilityLabel={`Show ${value || "everyone"}`} accessibilityState={{ selected: filters.gender === value }} onPress={() => setFilters({ ...filters, gender: value })} style={[styles.filterChoice, filters.gender === value && styles.filterChoiceActive]}><Text>{value || "All"}</Text></Pressable>)}
+          </View>
+          <View style={styles.filterRow}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Reset filters" onPress={() => { const reset = { minAge: "18", maxAge: "120", gender: "", location: "" }; setFilters(reset); setAppliedFilters(reset); setFiltersOpen(false); }} style={styles.filterAction}><Text>Reset</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Apply filters" onPress={() => { setAppliedFilters(filters); setFiltersOpen(false); }} style={[styles.filterAction, styles.filterApply]}><Text style={styles.retryText}>Apply</Text></Pressable>
+          </View>
+        </View>
+      )}
+      {(error || photoRefreshError) && <Text accessibilityRole="alert" style={styles.inlineError}>{error || photoRefreshError} Retry the action.</Text>}
       <GestureDetector gesture={gesture}>
         <Animated.View style={[styles.card, animatedStyle]}>
-          <Image source={{ uri: photoUrl }} style={styles.cardImage} />
+          <Image source={{ uri: photoUrl }} style={styles.cardImage} onError={renewPhotoUrls} />
           <View style={styles.cardOverlay}>
             <View style={styles.nameRow}>
               <Text style={styles.cardName}>
                 {currentProfile.display_name || "Unknown"}
                 {currentProfile.age ? `, ${currentProfile.age}` : ""}
               </Text>
-              {currentProfile.verified && <Text style={styles.badge}>✓</Text>}
             </View>
             {currentProfile.city && (
               <Text style={styles.cardLocation}>
@@ -129,6 +226,8 @@ export default function DiscoverScreen() {
           style={[styles.btn, styles.passBtn]}
           onPress={() => handleSwipe("pass")}
           disabled={swiping}
+          accessibilityRole="button"
+          accessibilityLabel="Pass on this profile"
         >
           <Text style={styles.btnIcon}>✕</Text>
         </Pressable>
@@ -136,6 +235,8 @@ export default function DiscoverScreen() {
           style={[styles.btn, styles.superBtn]}
           onPress={() => handleSwipe("superlike")}
           disabled={swiping}
+          accessibilityRole="button"
+          accessibilityLabel="Super like this profile"
         >
           <Text style={styles.btnIcon}>⭐</Text>
         </Pressable>
@@ -143,6 +244,8 @@ export default function DiscoverScreen() {
           style={[styles.btn, styles.likeBtn]}
           onPress={() => handleSwipe("like")}
           disabled={swiping}
+          accessibilityRole="button"
+          accessibilityLabel="Like this profile"
         >
           <Text style={[styles.btnIcon, { color: "#fff" }]}>♥</Text>
         </Pressable>
@@ -157,6 +260,19 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
   emptyTitle: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
   emptyText: { fontSize: 16, color: "#666" },
+  errorText: { fontSize: 16, color: "#b91c1c", textAlign: "center" },
+  inlineError: { color: "#b91c1c", paddingHorizontal: 16, paddingTop: 4 },
+  retryBtn: { marginTop: 16, backgroundColor: "#e11d48", borderRadius: 10, paddingHorizontal: 20, paddingVertical: 12 },
+  retryText: { color: "#fff", fontWeight: "700" },
+  filterToggle: { alignSelf: "flex-end", marginTop: 8, marginRight: 16, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: "#fff" },
+  filterToggleText: { color: "#333", fontWeight: "600" },
+  filters: { marginHorizontal: 16, marginTop: 8, padding: 10, gap: 8, borderWidth: 1, borderColor: "#ddd", borderRadius: 12, backgroundColor: "#fff" },
+  filterRow: { flexDirection: "row", gap: 6 },
+  filterInput: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 9 },
+  filterChoice: { flex: 1, padding: 7, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, alignItems: "center" },
+  filterChoiceActive: { borderColor: "#e11d48", backgroundColor: "#fef2f2" },
+  filterAction: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: "#ddd", alignItems: "center" },
+  filterApply: { backgroundColor: "#e11d48", borderColor: "#e11d48" },
   card: {
     flex: 1,
     margin: 16,
@@ -180,7 +296,6 @@ const styles = StyleSheet.create({
   },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardName: { fontSize: 26, fontWeight: "800", color: "#fff" },
-  badge: { fontSize: 16, color: "#38bdf8", fontWeight: "700" },
   cardLocation: { fontSize: 14, color: "#ddd", marginTop: 4 },
   cardBio: { fontSize: 14, color: "#eee", marginTop: 6 },
   buttons: {

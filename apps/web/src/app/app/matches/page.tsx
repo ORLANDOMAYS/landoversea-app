@@ -11,17 +11,23 @@ export default function MatchesPage() {
   const router = useRouter();
   const [matches, setMatches] = useState<MatchWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getCurrentUser().then((user) => {
-      if (user) {
-        getMatches(user.id).then((m) => {
-          setMatches(m);
-          setLoading(false);
-        });
-      }
-    });
-  }, []);
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const user = await getCurrentUser();
+      if (!user) throw new Error("Please sign in to see your matches.");
+      setMatches(await getMatches(user.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load matches.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
 
   if (loading) {
     return (
@@ -29,6 +35,10 @@ export default function MatchesPage() {
         <Heart className="w-10 h-10 text-rose-600 animate-pulse" />
       </div>
     );
+  }
+
+  if (error) {
+    return <div className="flex h-[70vh] items-center justify-center"><div role="alert" className="text-center"><p className="mb-4 text-red-700">{error}</p><button onClick={() => void load()} className="rounded-xl bg-rose-600 px-4 py-2 text-white">Retry</button></div></div>;
   }
 
   if (matches.length === 0) {
@@ -60,6 +70,7 @@ export default function MatchesPage() {
             <button
               key={match.id}
               onClick={() => router.push(`/app/chat?matchId=${match.id}`)}
+              aria-label={`Open chat with ${p?.display_name ?? "match"}`}
               className="w-full flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 hover:shadow-md transition text-left"
             >
               <img

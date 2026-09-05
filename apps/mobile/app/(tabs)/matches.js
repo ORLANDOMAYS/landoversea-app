@@ -1,32 +1,46 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { View, Text, FlatList, Pressable, Image, StyleSheet } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { getCurrentUser, getMatches } from "../../lib/api";
+import { loadMatchesForCurrentUser } from "../../lib/match-loader";
 
 export default function MatchesScreen() {
   const router = useRouter();
   const [userId, setUserId] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    getCurrentUser().then((user) => {
-      if (user) setUserId(user.id);
-    });
+  const loadMatches = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await loadMatchesForCurrentUser(getCurrentUser, getMatches);
+      setUserId(result.userId);
+      setMatches(result.matches);
+    } catch (err) {
+      setError(err?.message || "Unable to load matches.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      if (userId) getMatches(userId).then(setMatches);
-    }, [userId])
+      void loadMatches();
+    }, [loadMatches])
   );
 
   function renderMatch({ item }) {
     const p = item.profile;
     return (
-      <Pressable
-        style={styles.matchRow}
-        onPress={() => router.push(`/chat?matchId=${item.id}&userId=${userId}`)}
-      >
+      <View style={styles.matchRow}>
+        <Pressable
+          style={styles.chatTarget}
+          accessibilityRole="button"
+          accessibilityLabel={`Open chat with ${p?.display_name || "match"}`}
+          onPress={() => router.push(`/chat?matchId=${item.id}`)}
+        >
         <Image
           source={{
             uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(p?.display_name || "?")}&size=100&background=e11d48&color=fff`,
@@ -42,14 +56,25 @@ export default function MatchesScreen() {
             {item.lastMessage?.body || "Say hello!"}
           </Text>
         </View>
+        </Pressable>
         <Pressable
           style={styles.videoBtn}
           onPress={() => router.push(`/video-call?matchId=${item.id}`)}
+          accessibilityRole="button"
+          accessibilityLabel={`Start video call with ${p?.display_name || "match"}`}
         >
           <Text style={{ fontSize: 20 }}>📹</Text>
         </Pressable>
-      </Pressable>
+      </View>
     );
+  }
+
+  if (loading) {
+    return <View style={styles.center}><Text style={styles.emptyText}>Loading matches…</Text></View>;
+  }
+
+  if (error) {
+    return <View style={styles.center}><Text accessibilityRole="alert" style={styles.errorText}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Retry loading matches" style={styles.retryBtn} onPress={loadMatches}><Text style={styles.retryText}>Retry</Text></Pressable></View>;
   }
 
   if (!userId) {
@@ -85,6 +110,9 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   emptyTitle: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
   emptyText: { fontSize: 16, color: "#666" },
+  errorText: { color: "#b91c1c", fontSize: 16, textAlign: "center" },
+  retryBtn: { marginTop: 16, backgroundColor: "#e11d48", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
+  retryText: { color: "#fff", fontWeight: "700" },
   matchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -94,6 +122,7 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 56, height: 56, borderRadius: 28, marginRight: 12 },
   matchInfo: { flex: 1 },
+  chatTarget: { flex: 1, flexDirection: "row", alignItems: "center" },
   matchName: { fontSize: 17, fontWeight: "600" },
   langBadge: { fontSize: 11, color: "#e11d48", marginTop: 2 },
   lastMsg: { fontSize: 14, color: "#888", marginTop: 4 },
