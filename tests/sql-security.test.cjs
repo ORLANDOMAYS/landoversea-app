@@ -12,6 +12,10 @@ const migration = fs.readFileSync(
   path.join(root, "supabase/migrations/005_platform_security.sql"),
   "utf8"
 );
+const hostedUpgrade = fs.readFileSync(
+  path.join(root, "supabase/migrations/007_hosted_legacy_security_upgrade.sql"),
+  "utf8"
+);
 
 test("security fix is a new forward-only migration", () => {
   const migrations = fs
@@ -25,6 +29,8 @@ test("security fix is a new forward-only migration", () => {
     "004_auth_and_rls_security.sql",
   ]);
   assert.equal(migrations[4], "005_platform_security.sql");
+  assert.equal(migrations[5], "006_legacy_photo_and_coordinate_privacy.sql");
+  assert.equal(migrations[6], "007_hosted_legacy_security_upgrade.sql");
 });
 
 test("self verification and premium upgrade are not client executable", () => {
@@ -80,7 +86,24 @@ test("private photo bucket and owner paths have least-privilege policies", () =>
       new RegExp(`photos_objects_${action}_owner[\\s\\S]*storage\\.foldername\\(name\\)\\)\\[1\\] = auth\\.uid\\(\\)::text`, "i")
     );
   }
+  for (const action of ["read", "insert", "update", "delete"]) {
+    assert.match(
+      migration,
+      new RegExp(`photos_objects_${action}_guard[\\s\\S]*as restrictive[\\s\\S]*to public[\\s\\S]*bucket_id <> 'photos'`, "i")
+    );
+  }
   assert.match(migration, /A profile can have at most six photos/i);
+});
+
+test("legacy photo and location policies are replaced or neutralized", () => {
+  for (const table of ["photos", "user_locations"]) {
+    assert.match(
+      migration,
+      new RegExp(`from pg_catalog\\.pg_policies[\\s\\S]*tablename = '${table}'[\\s\\S]*drop policy if exists %I on public\\.${table}`, "i")
+    );
+  }
+  assert.match(migration, /create policy photos_read_authenticated[\s\S]*to authenticated/i);
+  assert.match(migration, /create policy locations_read_self[\s\S]*auth\.uid\(\) = user_id/i);
 });
 
 test("all client tables explicitly deny anonymous grants and owned writes use RLS", () => {
@@ -101,11 +124,59 @@ test("all client tables explicitly deny anonymous grants and owned writes use RL
 });
 
 test("coaches are approved-only and cannot self-approve", () => {
-  assert.match(migration, /create table public\.coaches/i);
+  assert.match(migration, /create table if not exists public\.coaches/i);
   for (const field of ["display_name", "avatar_url", "bio", "languages", "specialties", "hourly_rate", "platform_fee_percent", "rating", "total_reviews", "total_sessions", "verified", "approved", "active"]) {
     assert.match(migration, new RegExp(`\\b${field}\\b`, "i"));
   }
-  assert.match(migration, /coaches_read_approved[\s\S]*approved and active/i);
-  assert.match(migration, /coaches_insert_self_unapproved[\s\S]*approved = false[\s\S]*active = false[\s\S]*verified = false/i);
+  assert.match(migration, /coaches_read_approved[\s\S]*verified and approved and active/i);
+  assert.match(migration, /coaches_insert_self_unapproved[\s\S]*auth\.uid\(\) = owner_id[\s\S]*approved = false[\s\S]*active = false[\s\S]*verified = false/i);
   assert.match(migration, /new\.approved := old\.approved/i);
+  assert.match(migration, /new\.approved := false/i);
+});
+
+test("legacy coaches are upgraded in place without deleting existing records", () => {
+  assert.doesNotMatch(
+    migration,
+    /\b(?:drop\s+table|truncate\s+table|delete\s+from)\s+(?:public\.)?coaches\b/i
+  );
+  for (const field of ["owner_id", "approved", "active", "verified", "avatar_url", "hourly_rate", "total_reviews"]) {
+    assert.match(
+      migration,
+      new RegExp(`add column if not exists ${field}\\b`, "i")
+    );
+  }
+  assert.match(migration, /legacy_user_id_type = 'uuid'[\s\S]*set owner_id = user_id/i);
+  assert.match(migration, /column_name = 'photo_url'[\s\S]*set avatar_url = photo_url/i);
+  assert.match(migration, /column_name = 'rates_per_hour'[\s\S]*set hourly_rate/i);
+  assert.match(migration, /column_name = 'review_count'[\s\S]*set total_reviews/i);
+  assert.match(migration, /column_name = 'is_verified'[\s\S]*set verified = true/i);
+  assert.match(migration, /column_name = 'verification_status'[\s\S]*\('approved', 'verified'\)/i);
+  assert.match(migration, /set active = false[\s\S]*not approved or not verified/i);
+  assert.match(migration, /pg_get_serial_sequence\('public\.coaches', 'id'\)/i);
+  assert.match(migration, /grant usage, select on sequence %s to authenticated/i);
+});
+
+test("already-migrated hosted databases receive the legacy-safe hardening in migration 007", () => {
+  for (const source of [migration, hostedUpgrade]) {
+    assert.match(source, /create table if not exists public\.coaches/i);
+    assert.doesNotMatch(
+      source,
+      /\b(?:drop\s+table|truncate\s+table|delete\s+from)\s+(?:public\.)?coaches\b/i
+    );
+    assert.match(source, /add column if not exists owner_id uuid/i);
+    assert.match(source, /column_name = 'verification_status'[\s\S]*\('approved', 'verified'\)/i);
+    assert.match(source, /set active = false[\s\S]*not approved or not verified/i);
+    assert.match(source, /photos_objects_read_guard[\s\S]*as restrictive/i);
+    assert.match(source, /tablename = 'coaches'[\s\S]*drop policy if exists %I on public\.coaches/i);
+  }
+});
+
+test("all legacy coach policies are removed before moderated policies are installed", () => {
+  assert.match(
+    migration,
+    /from pg_catalog\.pg_policies[\s\S]*tablename = 'coaches'[\s\S]*drop policy if exists %I on public\.coaches/i
+  );
+  assert.match(migration, /coaches_read_self[\s\S]*auth\.uid\(\) = owner_id/i);
+  assert.match(migration, /before insert or update on public\.coaches/i);
+  assert.match(migration, /new\.owner_id := auth\.uid\(\)/i);
 });
