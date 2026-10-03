@@ -1,0 +1,12 @@
+{
+  "name": "landoversea-vercel-compatibility",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.26.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
