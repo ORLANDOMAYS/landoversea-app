@@ -1,0 +1,89 @@
+modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "e2e"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "api-test"
+
+[[workflows.workflow]]
+name = "e2e"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/landoversea run test:e2e"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "api-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run test:api"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[nix]
+channel = "stable-25_05"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-ac71c8ba-0378-4f32-b6c8-9ccf66ec127d"
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = "test_pkzJVwyZUbkPxzKHqXznuoQsXty"
+REVENUECAT_PROJECT_ID = "proj4ec09db7"
+REVENUECAT_TEST_STORE_APP_ID = "appd24f63410a"
+
+[userenv.development]
+EXPO_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpYmlwbmFua3BlZGtjZmhnenJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mjc3NzMsImV4cCI6MjA4OTUwMzc3M30.4qYM20PZ-CNYHuaTdDkJYZXeVFDOtD3d_nLe4J7QXWM"
+EXPO_PUBLIC_SUPABASE_URL = "https://vibipnankpedkcfhgzrb.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpYmlwbmFua3BlZGtjZmhnenJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mjc3NzMsImV4cCI6MjA4OTUwMzc3M30.4qYM20PZ-CNYHuaTdDkJYZXeVFDOtD3d_nLe4J7QXWM"
+VITE_SUPABASE_URL = "https://vibipnankpedkcfhgzrb.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable__fuvVcCXmKhbZVMcxjl5lg_CwsS2Sqb"
+SUPABASE_URL = "https://vibipnankpedkcfhgzrb.supabase.co"
+VITE_PUBLIC_APP_URL = "https://landover-sea.com"
+
+[userenv.production]
+EXPO_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpYmlwbmFua3BlZGtjZmhnenJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mjc3NzMsImV4cCI6MjA4OTUwMzc3M30.4qYM20PZ-CNYHuaTdDkJYZXeVFDOtD3d_nLe4J7QXWM"
+EXPO_PUBLIC_SUPABASE_URL = "https://vibipnankpedkcfhgzrb.supabase.co"
+EXPO_PUBLIC_DOMAIN = "landover-sea.com"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpYmlwbmFua3BlZGtjZmhnenJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mjc3NzMsImV4cCI6MjA4OTUwMzc3M30.4qYM20PZ-CNYHuaTdDkJYZXeVFDOtD3d_nLe4J7QXWM"
+VITE_SUPABASE_URL = "https://vibipnankpedkcfhgzrb.supabase.co"
+VITE_PUBLIC_APP_URL = "https://landover-sea.com"
+SUPABASE_URL = "https://vibipnankpedkcfhgzrb.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable__fuvVcCXmKhbZVMcxjl5lg_CwsS2Sqb"
+ALLOWED_ORIGINS = "https://landover-sea.com"
+PUBLIC_APP_URL = "https://landover-sea.com"

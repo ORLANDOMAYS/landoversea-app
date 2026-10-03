@@ -1,0 +1,29 @@
+- [Orval codegen pitfalls](orval-codegen.md) — Zod v4 syntax, format:binary, format:email all break Orval 8.23 with Zod v3; plus TS2308 collision fix.
+- [Single-owner auth boundary](shell-auth-guard.md) — Keep protected-shell authentication under one state owner to avoid observer remount loops.
+- [API server auth](api-auth.md) — Cookie-based JWT (los_token, 30d), bcryptjs+jsonwebtoken; SESSION_SECRET required at startup.
+- [E2E regression suite](e2e-regression-suite.md) — Playwright+API tests hit the dev proxy on :80, need workflows running; auth rate limiter is skipped outside production.
+- [Coach marketplace gating](coach-marketplace-gating.md) — public coach routes require isVerified+approved; seed fixtures must be dev-only, idempotent, non-authenticatable, and audited.
+- [Base44 migration boundary](base44-migration-boundary.md) — Base44 stays read-only; imports use immutable exports, and normal app traffic never depends on Base44.
+- [Conversation attachment authorization](conversation-attachment-authorization.md) — Bind each upload to its uploader and conversation; never overwrite an existing object ACL.
+- [Truthful Discover filters](truthful-discover-filters.md) — Persist one canonical filter model and never imply distance filtering without real coordinate data.
+- [Metro image parser audit](metro-image-size-audit.md) — image-size remains an unfixed high in Metro build tooling; do not misreport it as deployed app runtime exposure.
+- [Semantic localization parity](semantic-localization-parity.md) — Key-count tests can pass while changed copy remains English; audit meaning after material product or policy edits.
+- [Native subscription boundary](native-subscription-boundary.md) — Native purchases stay native; server Premium access requires authoritative, replay-safe provider reconciliation.
+- [Mobile identity transitions](mobile-identity-transitions.md) — Generation-bind async profile state and serialize RevenueCat disconnect/login to prevent cross-account leaks.
+- [Profile photo boundary](profile-photo-boundary.md) — Member-only private media; validate magic bytes, normalize HEIC server-side, and keep primary at position zero.
+- [Mobile auth overlays](mobile-auth-overlays.md) — Suppress redundant floating controls on narrow auth forms; keyboard heuristics alone may still allow input overlap.
+- [Resend sender readiness](resend-sender-readiness.md) — Connector authorization and sender-domain verification are separate; prove launch readiness with an accepted external-recipient send.
+- [Contrast surface pairing](contrast-surface-pairing.md) — Migrate foregrounds with their owning surfaces; fixed bright gradients and arbitrary photos need dedicated pairings.
+- [Dual repository boundary](dual-repository-boundary.md) — Keep Replit and GitHub histories isolated; GitHub main merges can automatically trigger Vercel.
+- [Expo pnpm singleton resolution](expo-pnpm-singletons.md) — strict workspaces need explicit Router/Worklets transforms and one Metro React singleton.
+- [Greptile review signals](greptile-review-signals.md) — GitHub checks may omit numeric confidence; verify unresolved threads separately and never infer 5/5.
+- [Supabase migration history](supabase-migration-history.md) — Never rely on editing a recorded migration; ship an idempotent forward repair and validate mixed histories.
+- [PostgreSQL advisor hardening](postgres-advisor-hardening.md) — Default function ACL revokes must be global; never enforce row limits through self-referential RLS.
+- [Supabase runtime boundary](supabase-runtime-boundary.md) — Supabase owns client sessions/core data; local API sidecars require immutable subject and explicit UUID bridges.
+- [Supabase magic-link fixtures](supabase-magic-link-fixtures.md) — Live release auth must respect callback allowlists and low email quotas without privileged access.
+- [Supabase Auth URL management](supabase-auth-url-management.md) — Hosted Site URL and redirect allowlists are external config; database MCP tools cannot change them.
+- [Apple release identity](apple-release-identity.md) — Reuse the verified Base44-era App Store record and advance its build number; never create a replacement listing.
+- [Mobile location storage](mobile-location-storage.md) — ISO location pickers use canonical names in legacy profile fields until a dedicated region/code migration is approved.
+- [Native scroll measurement](native-scroll-measurement.md) — Auto-height cards in RN scroll views must size intrinsically; clip decorative layers, not dynamic content.
+- [Profile query cache contracts](profile-query-cache-contracts.md) — Auth gates and full member profiles need distinct cache keys because their result shapes differ.
+- [Video-call schema compatibility](video-call-schema-compatibility.md) — Extend the live call schema in place; preserve legacy rows and participant-scoped status control.
