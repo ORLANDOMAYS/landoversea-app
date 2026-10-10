@@ -1,0 +1,1 @@
+revoke all privileges on table public.items from public;

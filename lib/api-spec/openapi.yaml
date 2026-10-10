@@ -1,0 +1,5586 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: LandOverSEA - International Dating & Cultural Connection API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: auth
+  - name: profiles
+  - name: discover
+  - name: matches
+  - name: conversations
+  - name: messages
+  - name: premium
+  - name: verification
+  - name: coaches
+  - name: bookings
+  - name: payments
+  - name: coaching-plans
+  - name: group-workshops
+  - name: cultural
+  - name: language-learning
+  - name: safety
+  - name: notifications
+  - name: admin
+  - name: storage
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── AUTH ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid registration input, including absent or false 18+ attestation
+        "409":
+          description: Email address is already registered
+
+  /auth/providers:
+    get:
+      operationId: getAuthProviders
+      tags: [auth]
+      summary: Report which registration providers can currently be started
+      responses:
+        "200":
+          description: Capability report; contains no credential values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthProviderCapabilities"
+
+  /auth/social/{provider}/start:
+    post:
+      operationId: startSocialAuth
+      tags: [auth]
+      summary: Reserved social registration start path (not yet available)
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [apple, google, facebook]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialAuthStartInput"
+      responses:
+        "200":
+          description: Reserved future success response; the route currently always returns 503
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SocialAuthStartResult"
+        "503":
+          description: Provider callback and session flow is not yet available
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/mobile/session:
+    post:
+      operationId: createMobileSession
+      tags: [auth]
+      summary: Create a bearer session for a trusted native client
+      description: Returns a JWT for secure device storage after validating email and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated native session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileAuthResponse"
+        "401":
+          description: Invalid credentials
+        "403":
+          description: Account restricted
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthenticated
+
+  /auth/delete-account:
+    delete:
+      operationId: deleteAccount
+      tags: [auth]
+      summary: Delete current user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteAccountInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Password confirmation is missing
+        "401":
+          description: Password confirmation is incorrect
+
+  /auth/account-deletion-requests:
+    post:
+      operationId: requestAccountDeletion
+      tags: [auth]
+      summary: Public, non-enumerating account-deletion assistance request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequestInput"
+      responses:
+        "202":
+          description: Generic accepted response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionRequestResponse"
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request a password reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordInput"
+      responses:
+        "200":
+          description: Generic accepted response (does not reveal account existence)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+        "503":
+          description: Reset delivery is unavailable (no email channel configured)
+        "500":
+          description: Server error
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password using a valid reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordInput"
+      responses:
+        "200":
+          description: Password reset succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPasswordResponse"
+        "400":
+          description: Invalid, expired, or already-used token, or invalid password
+        "503":
+          description: Reset is temporarily unavailable
+        "500":
+          description: Server error
+
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify an email address using a one-time token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailInput"
+      responses:
+        "200":
+          description: Email verified or already verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyEmailResponse"
+        "400":
+          description: Token is missing, invalid, or already used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationErrorResponse"
+        "410":
+          description: Token has expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationErrorResponse"
+        "423":
+          description: Token was locked after too many incorrect attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationErrorResponse"
+        "429":
+          description: Too many attempts from this IP
+        "503":
+          description: Verification is temporarily unavailable
+
+  /auth/resend-verification:
+    post:
+      operationId: resendVerificationEmail
+      tags: [auth]
+      summary: Send a new email-verification token to the authenticated user
+      responses:
+        "200":
+          description: Verification message accepted or account already verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResendVerificationResponse"
+        "429":
+          description: Verification message was requested too recently
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationErrorResponse"
+        "401":
+          description: Authentication is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationErrorResponse"
+        "404":
+          description: Authenticated user no longer exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationErrorResponse"
+        "503":
+          description: Verification delivery provider is unavailable or rejected the message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationErrorResponse"
+
+  # ── PROFILES ──────────────────────────────────────────────────────────────
+  /profiles/me:
+    get:
+      operationId: getMyProfile
+      tags: [profiles]
+      summary: Get current user's profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    patch:
+      operationId: updateMyProfile
+      tags: [profiles]
+      summary: Update current user's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Invalid or empty profile update
+
+  /profiles/me/photos:
+    post:
+      operationId: uploadProfilePhoto
+      tags: [profiles]
+      summary: Upload a profile photo (multipart)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/PhotoUploadInput"
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePhoto"
+        "400":
+          description: Missing file, unsupported image type, failed HEIC/HEIF conversion, or signature mismatch
+        "413":
+          description: Original or converted image is larger than 12 MB
+        "409":
+          description: Profile already has the maximum of six photos
+
+  /profiles/me/photos/{photoId}:
+    delete:
+      operationId: deleteProfilePhoto
+      tags: [profiles]
+      summary: Delete a profile photo
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: number
+            minimum: 1
+            multipleOf: 1
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid photo ID
+        "404":
+          description: Photo not found
+    patch:
+      operationId: reorderProfilePhoto
+      tags: [profiles]
+      summary: Reorder photo (set position)
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: number
+            minimum: 1
+            multipleOf: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhotoReorderInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePhoto"
+        "400":
+          description: Invalid photo ID, body, or position
+        "404":
+          description: Photo not found
+
+  /profiles/me/photos/{photoId}/primary:
+    put:
+      operationId: setPrimaryProfilePhoto
+      tags: [profiles]
+      summary: Set an owned profile photo as primary
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: number
+            minimum: 1
+            multipleOf: 1
+      responses:
+        "200":
+          description: Primary photo updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePhoto"
+        "400":
+          description: Invalid photo ID
+        "404":
+          description: Photo not found
+
+  /profiles/me/voice-intro:
+    post:
+      operationId: uploadVoiceIntro
+      tags: [profiles]
+      summary: Upload voice intro audio
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/VoiceUploadInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    delete:
+      operationId: deleteVoiceIntro
+      tags: [profiles]
+      summary: Delete voice intro
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /profiles/me/discovery-preferences:
+    patch:
+      operationId: updateDiscoveryPreferences
+      tags: [profiles]
+      summary: Update discovery preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscoveryPreferencesInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /profiles/{userId}:
+    get:
+      operationId: getProfile
+      tags: [profiles]
+      summary: Get a public profile by user ID
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfile"
+        "404":
+          description: Not found
+
+  /profiles/completion:
+    get:
+      operationId: getProfileCompletion
+      tags: [profiles]
+      summary: Get profile completion status and missing steps
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileCompletion"
+
+  # ── DISCOVER ──────────────────────────────────────────────────────────────
+  /discover/cards:
+    get:
+      operationId: getDiscoverCards
+      tags: [discover]
+      summary: Get a batch of profiles to swipe on
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 20
+        - name: gender
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: minAge
+          in: query
+          schema:
+            type: ["number", "null"]
+        - name: maxAge
+          in: query
+          schema:
+            type: ["number", "null"]
+        - name: countries
+          in: query
+          schema:
+            type: ["string", "null"]
+            description: Comma-separated country codes
+        - name: globalMode
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: languages
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: offset
+          in: query
+          schema:
+            type: number
+            default: 0
+        - name: verifiedOnly
+          in: query
+          schema:
+            type: boolean
+        - name: relationshipGoal
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: longDistance
+          in: query
+          schema:
+            type: boolean
+        - name: relocation
+          in: query
+          schema:
+            type: boolean
+        - name: interestsOverlap
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DiscoverCard"
+
+  /discover/swipe:
+    post:
+      operationId: swipe
+      tags: [discover]
+      summary: Like, pass, or superlike a profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SwipeInput"
+      responses:
+        "200":
+          description: OK — includes match info if mutual
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SwipeResult"
+        "400":
+          description: Invalid target, action, or self-swipe
+        "403":
+          description: A block exists between the users
+        "404":
+          description: Target user not found
+
+  /discover/filters:
+    get:
+      operationId: getDiscoverFilters
+      tags: [discover]
+      summary: Get current discover filter settings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverFilters"
+    patch:
+      operationId: updateDiscoverFilters
+      tags: [discover]
+      summary: Update discover filter settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscoverFiltersInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverFilters"
+
+  # ── MATCHES ───────────────────────────────────────────────────────────────
+  /matches:
+    get:
+      operationId: getMatches
+      tags: [matches]
+      summary: List mutual matches
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: number
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Match"
+
+  /matches/{matchId}:
+    get:
+      operationId: getMatch
+      tags: [matches]
+      summary: Get a specific match
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+    delete:
+      operationId: unmatch
+      tags: [matches]
+      summary: Unmatch (delete match)
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /matches/stats:
+    get:
+      operationId: getMatchStats
+      tags: [matches]
+      summary: Match counts and activity stats
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchStats"
+
+  # ── CONVERSATIONS ─────────────────────────────────────────────────────────
+  /conversations:
+    get:
+      operationId: getConversations
+      tags: [conversations]
+      summary: List all conversations (direct + group)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+
+  /conversations/group:
+    post:
+      operationId: createGroupConversation
+      tags: [conversations]
+      summary: Create a group conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}/members:
+    post:
+      operationId: addGroupMember
+      tags: [conversations]
+      summary: Add a member to a group (owner/admin only)
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddMemberInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}/members/{userId}:
+    delete:
+      operationId: removeGroupMember
+      tags: [conversations]
+      summary: Remove a member from a group (owner/admin only)
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}/members/{userId}/role:
+    patch:
+      operationId: setGroupMemberRole
+      tags: [conversations]
+      summary: Promote/demote a group member (owner only)
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetMemberRoleInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}/leave:
+    post:
+      operationId: leaveConversation
+      tags: [conversations]
+      summary: Leave a group conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /conversations/{conversationId}:
+    get:
+      operationId: getConversation
+      tags: [conversations]
+      summary: Get a conversation by ID
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}/pin:
+    patch:
+      operationId: pinConversation
+      tags: [conversations]
+      summary: Pin or unpin a conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PinInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}/mute:
+    patch:
+      operationId: muteConversation
+      tags: [conversations]
+      summary: Mute or unmute a conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MuteInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}/read:
+    post:
+      operationId: markConversationRead
+      tags: [conversations]
+      summary: Mark all messages in conversation as read
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /conversations/{conversationId}/translation-preferences:
+    patch:
+      operationId: updateTranslationPreferences
+      tags: [conversations]
+      summary: Update the current participant's personal translation preference
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslationPreferenceInput"
+      responses:
+        "200":
+          description: Viewer-scoped translation preference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslationPreference"
+        "400":
+          description: Invalid canonical target
+        "403":
+          description: Not a participant
+
+  # ── MESSAGES ──────────────────────────────────────────────────────────────
+  /conversations/{conversationId}/messages:
+    get:
+      operationId: getMessages
+      tags: [messages]
+      summary: List messages in a conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 50
+        - name: before
+          in: query
+          schema:
+            type: string
+            description: Stable ISO timestamp or ISO|messageId cursor for pagination
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /conversations/{conversationId}/messages/{messageId}:
+    delete:
+      operationId: deleteMessage
+      tags: [messages]
+      summary: Delete a message (soft delete)
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /conversations/{conversationId}/messages/preview:
+    post:
+      operationId: previewMessageTranslation
+      tags: [messages]
+      summary: Preview a draft translation without persisting it
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslationPreviewInput"
+      responses:
+        "200":
+          description: Translation preview or same-language bypass
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslationPreviewResult"
+        "400":
+          description: Invalid body or canonical target
+        "403":
+          description: Conversation access denied
+        "413":
+          description: Draft is too long
+        "429":
+          description: Translation provider rate limited
+        "502":
+          description: Translation provider unavailable
+
+  /conversations/{conversationId}/messages/{messageId}/react:
+    post:
+      operationId: reactToMessage
+      tags: [messages]
+      summary: Add or remove emoji reaction on a message
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReactionInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /conversations/{conversationId}/messages/{messageId}/translate:
+    post:
+      operationId: translateMessage
+      tags: [messages]
+      summary: Translate a message to a target language
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslateInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Translation"
+        "400":
+          description: Invalid target or message content
+        "403":
+          description: Conversation access denied
+        "404":
+          description: Message not found
+        "413":
+          description: Message is too long to translate
+        "429":
+          description: Translation provider rate limited
+        "502":
+          description: Translation provider unavailable
+
+  /conversations/{conversationId}/messages/upload:
+    post:
+      operationId: uploadMessageAttachment
+      tags: [messages]
+      summary: Register an already-uploaded object storage attachment for a message
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachmentUploadInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachmentUploadResult"
+
+  /conversations/{conversationId}/messages/transcribe:
+    post:
+      operationId: transcribeVoiceNote
+      tags: [messages]
+      summary: Transcribe an uploaded voice-note object
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscribeInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscribeResult"
+
+  # ── PREMIUM ───────────────────────────────────────────────────────────────
+  /premium/plans:
+    get:
+      operationId: getPremiumPlans
+      tags: [premium]
+      summary: List available premium plans
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PremiumPlan"
+
+  /premium/subscription:
+    get:
+      operationId: getMySubscription
+      tags: [premium]
+      summary: Get current user's premium subscription
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PremiumSubscription"
+    post:
+      operationId: createSubscription
+      tags: [premium]
+      summary: Start a premium subscription (returns checkout URL if applicable)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscribeInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscribeResult"
+    delete:
+      operationId: cancelSubscription
+      tags: [premium]
+      summary: Cancel subscription at period end
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PremiumSubscription"
+
+  /premium/native/reconcile:
+    post:
+      operationId: reconcileNativePremium
+      tags: [premium]
+      summary: Reconcile the authenticated user's native premium entitlement
+      description: Requires a verified Supabase Bearer identity and queries RevenueCat server-side using los_user_<immutable Supabase UUID>. In every environment, an active Premium entitlement must be explicitly attached to a current access-granting App Store or Play Store subscription; RevenueCat Test Store, promotional, and unrelated subscription state are rejected. The request has no body; client entitlement, premium, receipt, and transaction claims are never accepted.
+      responses:
+        "200":
+          description: Provider entitlement was verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NativePremiumReconciliation"
+        "403":
+          description: The authenticated credential does not carry a valid attached Supabase subject
+        "503":
+          description: RevenueCat verification is temporarily unavailable; no entitlement assertion was accepted
+
+  /premium/superlikes:
+    get:
+      operationId: getSuperlikeBalance
+      tags: [premium]
+      summary: Get superlike balance
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuperlikeBalance"
+
+  # ── VERIFICATION ──────────────────────────────────────────────────────────
+  /verification/request:
+    post:
+      operationId: requestVerification
+      tags: [verification]
+      summary: Submit a selfie for verification review
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/VerificationRequestInput"
+      responses:
+        "201":
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRequest"
+        "400":
+          description: Missing or invalid image
+        "409":
+          description: Account is already verified
+        "413":
+          description: Image exceeds the 5 MB upload limit
+        "502":
+          description: Private object storage upload failed
+
+  /verification/status:
+    get:
+      operationId: getVerificationStatus
+      tags: [verification]
+      summary: Get current verification status
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRequest"
+
+  # ── COACHES ───────────────────────────────────────────────────────────────
+  /coaches:
+    get:
+      operationId: getCoaches
+      tags: [coaches]
+      summary: List available coaches
+      parameters:
+        - name: specialty
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: language
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: number
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Coach"
+
+  /coaches/{coachId}:
+    get:
+      operationId: getCoach
+      tags: [coaches]
+      summary: Get a coach profile
+      parameters:
+        - name: coachId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coach"
+
+  /coaches/{coachId}/availability:
+    get:
+      operationId: getCoachAvailability
+      tags: [coaches]
+      summary: Get available time slots for a coach
+      parameters:
+        - name: coachId
+          in: path
+          required: true
+          schema:
+            type: number
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: timeZone
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeSlot"
+
+  /coaches/{coachId}/reviews:
+    get:
+      operationId: getCoachReviews
+      tags: [coaches]
+      summary: List reviews for a coach
+      parameters:
+        - name: coachId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+
+  /coaches/me:
+    get:
+      operationId: getMyCoachProfile
+      tags: [coaches]
+      summary: Get logged-in coach's own profile (coach dashboard)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coach"
+    post:
+      operationId: createCoachProfile
+      tags: [coaches]
+      summary: Create own coach profile with recurring availability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coach"
+    patch:
+      operationId: updateCoachProfile
+      tags: [coaches]
+      summary: Update coach profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coach"
+
+  /coaches/me/verification:
+    post:
+      operationId: submitCoachVerification
+      tags: [coaches]
+      summary: Submit or resubmit a coach verification application
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachVerificationSubmitInput"
+      responses:
+        "201":
+          description: Application submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coach"
+
+  /coaches/me/credentials:
+    get:
+      operationId: getMyCoachCredentials
+      tags: [coaches]
+      summary: List the current coach's credential metadata
+      responses:
+        "200":
+          description: Private-path-free credential metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachCredential"
+    post:
+      operationId: finalizeCoachCredential
+      tags: [coaches]
+      summary: Validate and finalize an uploaded private coach credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachCredentialInput"
+      responses:
+        "201":
+          description: Credential submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachCredential"
+        "404":
+          description: Coach profile not found
+        "409":
+          description: Already pending or already approved
+
+  /coaches/me/availability:
+    patch:
+      operationId: updateCoachAvailability
+      tags: [coaches]
+      summary: Update coach's available time slots
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvailabilityInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /coaches/me/bookings:
+    get:
+      operationId: getMyCoachBookings
+      tags: [coaches]
+      summary: Get bookings for coach dashboard
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+
+  /coaches/me/dashboard:
+    get:
+      operationId: getCoachDashboard
+      tags: [coaches]
+      summary: Coach dashboard stats (revenue, bookings, clients)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachDashboard"
+
+  # ── BOOKINGS ──────────────────────────────────────────────────────────────
+  /bookings:
+    get:
+      operationId: getMyBookings
+      tags: [bookings]
+      summary: List my bookings as client
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Book a coaching session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /bookings/{bookingId}:
+    get:
+      operationId: getBooking
+      tags: [bookings]
+      summary: Get a booking
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+    delete:
+      operationId: cancelBooking
+      tags: [bookings]
+      summary: Cancel a booking
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /bookings/{bookingId}/review:
+    post:
+      operationId: submitBookingReview
+      tags: [bookings]
+      summary: Submit a review for a completed booking
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /bookings/{bookingId}/notes:
+    post:
+      operationId: addCoachNote
+      tags: [bookings]
+      summary: Add coach notes to a booking/session
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachNoteInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /bookings/{bookingId}/checkout:
+    post:
+      operationId: createBookingCheckout
+      tags: [payments]
+      summary: Create an idempotent hosted checkout session for a booking
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingCheckoutInput"
+      responses:
+        "201":
+          description: Hosted checkout created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingCheckoutResult"
+        "409":
+          description: Booking is ineligible or already paid
+        "503":
+          description: Payment provider is unavailable
+
+  /bookings/{bookingId}/payment-intent:
+    post:
+      operationId: createBookingPaymentIntent
+      tags: [payments]
+      deprecated: true
+      summary: Deprecated — use hosted checkout
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "410":
+          description: Direct payment intents are no longer supported
+
+  /bookings/{bookingId}/payment:
+    get:
+      operationId: getBookingPayment
+      tags: [payments]
+      summary: Get payment, refund, and coach-payout status for a booking
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Current payment lifecycle state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingPaymentStatus"
+
+  /bookings/{bookingId}/refund:
+    post:
+      operationId: refundBookingPayment
+      tags: [payments]
+      summary: Refund an eligible captured booking payment
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "201":
+          description: Refund submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingRefundResult"
+        "409":
+          description: Payment is not refundable
+        "503":
+          description: Payment provider is unavailable
+
+  # ── CLIENT SUBSCRIPTIONS (COACHING) ───────────────────────────────────────
+  /coaching/subscriptions:
+    get:
+      operationId: getClientSubscriptions
+      tags: [coaching-plans]
+      summary: Get my coaching subscriptions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientSubscription"
+    post:
+      operationId: subscribeToCoach
+      tags: [coaching-plans]
+      summary: Subscribe to a coaching plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientSubscriptionInput"
+      responses:
+        "400":
+          description: Invalid coach or self-subscription
+        "404":
+          description: Coach not found or unavailable
+        "409":
+          description: An active subscription already exists
+        "503":
+          description: Recurring subscription payment is unavailable
+
+  /coaching/subscriptions/{subscriptionId}:
+    delete:
+      operationId: cancelClientSubscription
+      tags: [coaching-plans]
+      summary: Cancel a coaching subscription
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /coaching/plans:
+    get:
+      operationId: getCoachingPlans
+      tags: [coaching-plans]
+      summary: Get client's coaching plans / progress
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachingPlan"
+
+  /coaching/plans/{planId}/progress:
+    patch:
+      operationId: updateCoachingProgress
+      tags: [coaching-plans]
+      summary: Update progress on a coaching plan
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachingPlan"
+
+  # ── GROUP WORKSHOPS ────────────────────────────────────────────────────────
+  /workshops:
+    get:
+      operationId: getWorkshops
+      tags: [group-workshops]
+      summary: List upcoming group workshops
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupWorkshop"
+    post:
+      operationId: createWorkshop
+      tags: [group-workshops]
+      summary: Create a group workshop (coach only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkshopInput"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupWorkshop"
+
+  /workshops/{workshopId}:
+    get:
+      operationId: getWorkshop
+      tags: [group-workshops]
+      summary: Get a group workshop
+      parameters:
+        - name: workshopId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupWorkshop"
+
+  /workshops/{workshopId}/enroll:
+    post:
+      operationId: enrollWorkshop
+      tags: [group-workshops]
+      summary: Enroll in a group workshop
+      parameters:
+        - name: workshopId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # ── CULTURAL PASSPORT & EVENTS & TRIBES ───────────────────────────────────
+  /cultural/passport:
+    get:
+      operationId: getCulturalPassport
+      tags: [cultural]
+      summary: Get my cultural passport and stamps
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CulturalPassport"
+
+  /cultural/stamps:
+    get:
+      operationId: getCulturalStamps
+      tags: [cultural]
+      summary: List all earned cultural stamps
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CulturalStamp"
+
+  /cultural/leaderboard:
+    get:
+      operationId: getCulturalLeaderboard
+      tags: [cultural]
+      summary: Get the persisted culture/community leaderboard
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /cultural/facts:
+    post:
+      operationId: submitCulturalFact
+      tags: [cultural]
+      summary: Submit a cultural fact for moderation review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, fact]
+              properties:
+                country:
+                  type: string
+                fact:
+                  type: string
+                category:
+                  type: ["string", "null"]
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CulturalFact"
+    get:
+      operationId: getCulturalFacts
+      tags: [cultural]
+      summary: Get a random cultural fact (daily)
+      parameters:
+        - name: country
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CulturalFact"
+
+  /cultural/events:
+    get:
+      operationId: getCulturalEvents
+      tags: [cultural]
+      summary: List global cultural events
+      parameters:
+        - name: country
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CulturalEvent"
+
+  /cultural/events/{eventId}/rsvp:
+    post:
+      operationId: rsvpEvent
+      tags: [cultural]
+      summary: RSVP to a cultural event
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CulturalEvent"
+        "404":
+          description: Event not found
+    delete:
+      operationId: cancelEventRsvp
+      tags: [cultural]
+      summary: Cancel the current user's RSVP to a cultural event
+      description: Idempotently removes the authenticated user's RSVP. Repeating the request succeeds.
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: number
+            minimum: 1
+            multipleOf: 1
+      responses:
+        "200":
+          description: RSVP is absent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CulturalEvent"
+        "404":
+          description: Event not found
+
+  /cultural/tribes:
+    get:
+      operationId: getTribes
+      tags: [cultural]
+      summary: List available tribes / communities
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tribe"
+
+  /cultural/tribes/{tribeId}/join:
+    post:
+      operationId: joinTribe
+      tags: [cultural]
+      summary: Join a tribe
+      parameters:
+        - name: tribeId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /cultural/tribes/{tribeId}/leave:
+    delete:
+      operationId: leaveTribe
+      tags: [cultural]
+      summary: Leave a tribe
+      parameters:
+        - name: tribeId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /cultural/conversation-starters:
+    get:
+      operationId: getConversationStarters
+      tags: [cultural]
+      summary: Get culturally-aware conversation starters
+      parameters:
+        - name: country
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConversationStarter"
+
+  # ── LANGUAGE LEARNING ─────────────────────────────────────────────────────
+  /language/streak:
+    get:
+      operationId: getLanguageStreak
+      tags: [language-learning]
+      summary: Get current learning streak and XP
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LanguageStreak"
+
+  /language/quizzes:
+    get:
+      operationId: getLanguageQuizzes
+      tags: [language-learning]
+      summary: List available quizzes
+      parameters:
+        - name: language
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: category
+          in: query
+          schema:
+            type: ["string", "null"]
+            description: vocabulary | grammar | comprehension | cultural
+        - name: difficulty
+          in: query
+          schema:
+            type: ["string", "null"]
+            description: beginner | intermediate | advanced
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LanguageQuiz"
+
+  /language/quizzes/{quizId}:
+    get:
+      operationId: getLanguageQuiz
+      tags: [language-learning]
+      summary: Get a quiz with its public questions
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LanguageQuiz"
+        "404":
+          description: Quiz not found
+
+  /language/quizzes/{quizId}/attempt:
+    post:
+      operationId: submitQuizAttempt
+      tags: [language-learning]
+      summary: Submit a quiz attempt with answers
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizAttemptInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAttemptResult"
+
+  /language/ai-coach:
+    post:
+      operationId: sendAiCoachMessage
+      tags: [language-learning]
+      summary: Send a message to the AI language coach
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiCoachInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiCoachResponse"
+
+  /language/ai-coach/history:
+    get:
+      operationId: getAiCoachHistory
+      tags: [language-learning]
+      summary: Get AI coach conversation history
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiCoachMessage"
+
+  # ── SAFETY ────────────────────────────────────────────────────────────────
+  /safety/users/resolve/{supabaseUserId}:
+    get:
+      operationId: resolveSafetyUser
+      tags: [safety]
+      summary: Resolve a linked Supabase user for safety actions
+      parameters:
+        - name: supabaseUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+      responses:
+        "200":
+          description: Linked local safety identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyUserResolution"
+        "400":
+          description: Invalid Supabase user ID
+        "404":
+          description: Supabase user has no linked local safety identity
+
+  /safety/block:
+    post:
+      operationId: blockUser
+      tags: [safety]
+      summary: Block a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid target or self-block
+        "404":
+          description: Target user not found
+
+  /safety/block/{blockedUserId}:
+    delete:
+      operationId: unblockUser
+      tags: [safety]
+      summary: Unblock a user
+      parameters:
+        - name: blockedUserId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid target or self-unblock
+        "404":
+          description: Target user not found
+
+  /safety/blocks:
+    get:
+      operationId: getBlockedUsers
+      tags: [safety]
+      summary: List blocked users
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BlockedUser"
+
+  /safety/report:
+    post:
+      operationId: reportUser
+      tags: [safety]
+      summary: Report a user or content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /safety/tips:
+    get:
+      operationId: getSafetyTips
+      tags: [safety]
+      summary: Get safety advice tips
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SafetyTip"
+
+  # ── NOTIFICATIONS ─────────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: List notifications
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 30
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/push-tokens:
+    post:
+      operationId: registerPushToken
+      tags: [notifications]
+      summary: Register or reactivate a push-delivery token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenInput"
+      responses:
+        "201":
+          description: Push token registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushToken"
+    delete:
+      operationId: removePushToken
+      tags: [notifications]
+      summary: Remove a push-delivery token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        "200":
+          description: Token removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /notifications/preferences:
+    get:
+      operationId: getNotificationPreferences
+      tags: [notifications]
+      summary: Get server-side notification delivery preferences
+      responses:
+        "200":
+          description: Current preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "400":
+          description: Query parameters are not supported
+    put:
+      operationId: updateNotificationPreferences
+      tags: [notifications]
+      summary: Update server-side notification delivery preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationPreferencesInput"
+      responses:
+        "200":
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "400":
+          description: Invalid or incomplete preferences
+
+  /notifications/deliveries:
+    get:
+      operationId: getNotificationDeliveries
+      tags: [notifications]
+      summary: List delivery status for the current user's notifications
+      responses:
+        "200":
+          description: Delivery attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotificationDelivery"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /notifications/{notificationId}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a single notification as read
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadCount
+      tags: [notifications]
+      summary: Get unread notification + message counts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+
+  /admin/payments/reconcile:
+    get:
+      operationId: reconcilePayments
+      tags: [payments, admin]
+      summary: List payment, refund, and coach-transfer records requiring reconciliation
+      responses:
+        "200":
+          description: Reconciliation queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentReconciliation"
+
+  /admin/payments/transfers/{transferId}/retry:
+    post:
+      operationId: retryCoachTransfer
+      tags: [payments, admin]
+      summary: Retry an eligible failed coach transfer idempotently
+      parameters:
+        - name: transferId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Transfer retry result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                  reason:
+                    type: string
+
+  /payments/webhook:
+    post:
+      operationId: receivePaymentWebhook
+      tags: [payments]
+      summary: Receive a raw, signature-verified Stripe webhook
+      parameters:
+        - name: stripe-signature
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Webhook received
+        "400":
+          description: Signature verification failed
+
+  # ── ADMIN ─────────────────────────────────────────────────────────────────
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: Admin — list all users
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: number
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: number
+            default: 0
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserList"
+
+  /admin/users/{userId}:
+    get:
+      operationId: adminGetUser
+      tags: [admin]
+      summary: Admin — get a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+    patch:
+      operationId: adminUpdateUser
+      tags: [admin]
+      summary: Admin — update user role or restriction
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /admin/reports:
+    get:
+      operationId: adminListReports
+      tags: [admin]
+      summary: Admin — list pending reports
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserReport"
+
+  /admin/reports/{reportId}:
+    patch:
+      operationId: adminReviewReport
+      tags: [admin]
+      summary: Admin — review and resolve a report
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportReviewInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserReport"
+
+  /admin/verifications:
+    get:
+      operationId: adminListVerifications
+      tags: [admin]
+      summary: Admin — list pending verification requests
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerificationRequest"
+
+  /admin/verifications/{requestId}:
+    patch:
+      operationId: adminReviewVerification
+      tags: [admin]
+      summary: Admin — approve or reject a verification request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerificationReviewInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRequest"
+
+  /admin/verifications/{requestId}/document:
+    get:
+      operationId: adminGetVerificationDocument
+      tags: [admin]
+      summary: Admin — securely stream a private verification document
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Private verification image stream
+        "404":
+          description: Verification document not found
+
+  /admin/analytics:
+    get:
+      operationId: adminGetAnalytics
+      tags: [admin]
+      summary: Admin — platform analytics snapshot
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAnalytics"
+
+  /admin/coaches:
+    get:
+      operationId: adminListCoaches
+      tags: [admin]
+      summary: Admin — list coaches (including unverified)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Coach"
+
+  /admin/coaches/{coachId}/verify:
+    patch:
+      operationId: adminVerifyCoach
+      tags: [admin]
+      summary: Admin — approve or reject coach verification
+      parameters:
+        - name: coachId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachVerifyInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coach"
+
+  /admin/coaches/{coachId}/payout:
+    patch:
+      operationId: adminSetCoachPayoutReady
+      tags: [admin]
+      summary: Admin — set coach payout readiness
+      parameters:
+        - name: coachId
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachPayoutInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coach"
+
+  /admin/coaches/{coachId}/audit:
+    get:
+      operationId: adminGetCoachAudit
+      tags: [admin]
+      summary: Admin — audit trail of coach verification and payout changes
+      parameters:
+        - name: coachId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachAuditEvent"
+
+  /admin/coaches/{coachId}/credentials:
+    get:
+      operationId: adminListCoachCredentials
+      tags: [admin]
+      summary: Admin — list private coach credential metadata
+      parameters:
+        - name: coachId
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Credential metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachCredential"
+
+  /admin/coaches/{coachId}/credentials/{credentialId}/document:
+    get:
+      operationId: adminStreamCoachCredential
+      tags: [admin]
+      summary: Admin — stream a private coach credential
+      parameters:
+        - name: coachId
+          in: path
+          required: true
+          schema: { type: number }
+        - name: credentialId
+          in: path
+          required: true
+          schema: { type: number }
+      responses:
+        "200":
+          description: PDF, JPEG, or PNG bytes
+        "404":
+          description: Credential not found
+
+  /admin/account-deletion-requests:
+    get:
+      operationId: adminListAccountDeletionRequests
+      tags: [admin]
+      summary: Admin — list deletion assistance requests
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            default: pending
+      responses:
+        "200":
+          description: Requests containing hashes, never plaintext email
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountDeletionRequest"
+
+  /admin/account-deletion-requests/{requestId}:
+    patch:
+      operationId: adminResolveAccountDeletionRequest
+      tags: [admin]
+      summary: Admin — resolve or dismiss a deletion assistance request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema: { type: number }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequestUpdate"
+      responses:
+        "200":
+          description: Updated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionRequest"
+
+  /storage/uploads/request-url:
+    post:
+      tags: [storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '401':
+          description: Unauthorized
+
+  /premium/who-liked-me:
+    get:
+      tags: [premium]
+      operationId: getWhoLikedMe
+      summary: Get users who liked the current user (premium only)
+      responses:
+        '200':
+          description: List of profiles who liked you
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PublicProfile'
+        '403':
+          description: Premium required
+
+components:
+  schemas:
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+        size:
+          type: number
+        contentType:
+          type: string
+        purpose:
+          type: string
+          description: >-
+            Owner-bound upload purpose. One of photo, voice_intro, verification,
+            coach_credential, attachment. For attachment, conversationId is required.
+        conversationId:
+          type: ["number", "null"]
+          description: >-
+            Required (positive) when purpose is attachment; binds the upload token
+            to that conversation. Ignored for other purposes.
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        uploadToken:
+          type: string
+          description: >-
+            Short-lived signed claim binding objectPath, uploader, purpose, and
+            (for attachments) conversationId. Present it when registering the object.
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    # ── AUTH ──────────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [email, password, name, acceptedAgeRequirement]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+        acceptedAgeRequirement:
+          type: boolean
+          const: true
+          description: Must be true to attest that the registering user is 18 or older.
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+
+    DeleteAccountInput:
+      type: object
+      required: [confirmPassword]
+      properties:
+        confirmPassword:
+          type: string
+
+    AccountDeletionRequestInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          maxLength: 320
+
+    AccountDeletionRequestResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    AccountDeletionRequest:
+      type: object
+      required: [id, emailHash, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: number
+        userId:
+          type: ["number", "null"]
+        emailHash:
+          type: string
+        status:
+          type: string
+          enum: [pending, resolved, dismissed]
+        resolvedBy:
+          type: ["number", "null"]
+        resolvedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AccountDeletionRequestUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [resolved, dismissed]
+
+    AuthProviderCapability:
+      type: object
+      required: [available]
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: ["string", "null"]
+
+    AuthProviderCapabilities:
+      type: object
+      required: [apple, google, facebook, email]
+      properties:
+        apple:
+          $ref: "#/components/schemas/AuthProviderCapability"
+        google:
+          $ref: "#/components/schemas/AuthProviderCapability"
+        facebook:
+          $ref: "#/components/schemas/AuthProviderCapability"
+        email:
+          $ref: "#/components/schemas/AuthProviderCapability"
+
+    SocialAuthStartInput:
+      type: object
+      required: [redirectUri]
+      properties:
+        redirectUri:
+          type: string
+
+    SocialAuthStartResult:
+      type: object
+      required: [provider, available]
+      properties:
+        provider:
+          type: string
+          enum: [apple, google, facebook]
+        available:
+          type: boolean
+        authorizationUrl:
+          type: string
+
+    ForgotPasswordInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+
+    ForgotPasswordResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+          description: Present only in recovery test mode; never returned in production.
+
+    ResetPasswordInput:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+
+    ResetPasswordResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    VerifyEmailInput:
+      type: object
+      minProperties: 1
+      properties:
+        code:
+          type: string
+          pattern: '^\d{6}$'
+        token:
+          type: string
+          description: Legacy public verification token field.
+
+    VerifyEmailResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        verified:
+          type: boolean
+        alreadyVerified:
+          type: boolean
+        sessionEstablished:
+          type: boolean
+          description: A fresh web session cookie was issued.
+
+    VerificationDelivery:
+      type: string
+      enum: [email, development, unavailable]
+
+    VerificationErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        deliveryAvailable:
+          type: boolean
+        verificationDelivery:
+          $ref: "#/components/schemas/VerificationDelivery"
+        retryAfter:
+          type: number
+          minimum: 0
+
+    ResendVerificationResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        alreadyVerified:
+          type: boolean
+        verificationEmailSent:
+          type: boolean
+        verificationDelivery:
+          $ref: "#/components/schemas/VerificationDelivery"
+        retryAfter:
+          type: number
+          minimum: 0
+          description: Authoritative seconds until another accepted resend may be requested.
+        code:
+          type: string
+          pattern: '^\d{6}$'
+          description: Present only in verification test mode; never returned in production.
+        token:
+          type: string
+          deprecated: true
+          description: Test-mode-only legacy alias for code.
+
+    AuthResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        verificationEmailSent:
+          type: boolean
+        verificationDelivery:
+          $ref: "#/components/schemas/VerificationDelivery"
+        verificationMessage:
+          type: string
+        retryAfter:
+          type: number
+          minimum: 0
+          description: Authoritative seconds until another accepted resend may be requested.
+        verificationCode:
+          type: string
+          pattern: '^\d{6}$'
+          description: Present only in verification test mode; never returned in production.
+        verificationToken:
+          type: string
+          deprecated: true
+          description: Test-mode-only legacy alias for verificationCode.
+
+    MobileAuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+          minLength: 1
+          description: Bearer token that native clients must keep in secure device storage.
+
+    User:
+      type: object
+      required: [id, email, name, role, verificationRequired, createdAt]
+      properties:
+        id:
+          type: number
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [user, coach, admin]
+        isProfileComplete:
+          type: boolean
+        isPremium:
+          type: boolean
+        isEmailVerified:
+          type: boolean
+        verificationRequired:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── PROFILE ───────────────────────────────────────────────────────────
+    Profile:
+      type: object
+      required: [id, userId, name]
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        name:
+          type: string
+        age:
+          type: ["number", "null"]
+        bio:
+          type: ["string", "null"]
+        occupation:
+          type: ["string", "null"]
+        height:
+          type: ["number", "null"]
+        gender:
+          type: ["string", "null"]
+        lookingFor:
+          type: ["string", "null"]
+        relationshipGoal:
+          type: ["string", "null"]
+        primaryLanguage:
+          type: ["string", "null"]
+        otherLanguages:
+          type: array
+          items:
+            type: string
+        learningLanguages:
+          type: array
+          items:
+            type: string
+        country:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        countriesOfInterest:
+          type: array
+          items:
+            type: string
+        culturalInterests:
+          type: array
+          items:
+            type: string
+        interests:
+          type: array
+          items:
+            type: string
+        travelGoals:
+          type: ["string", "null"]
+        longDistanceOpenness:
+          type: boolean
+        relocationOpenness:
+          type: boolean
+        communicationPreferences:
+          type: array
+          items:
+            type: string
+        preferredMinAge:
+          type: ["number", "null"]
+        preferredMaxAge:
+          type: ["number", "null"]
+        preferredGender:
+          type: ["string", "null"]
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfilePhoto"
+        voiceIntroUrl:
+          type: ["string", "null"]
+        isVerified:
+          type: boolean
+        verificationStatus:
+          type: ["string", "null"]
+          enum: [none, pending, approved, rejected, null]
+        discoveryEnabled:
+          type: boolean
+        globalDiscovery:
+          type: boolean
+        completionPercent:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        bio:
+          type: string
+          maxLength: 2000
+        age:
+          type: number
+          minimum: 18
+          maximum: 100
+          multipleOf: 1
+        occupation:
+          type: string
+          maxLength: 120
+        height:
+          type: number
+          minimum: 100
+          maximum: 250
+          multipleOf: 1
+        gender:
+          type: string
+          enum: [Man, Woman, Non-binary, Transgender, Prefer not to say, Other]
+        lookingFor:
+          type: string
+          enum: [Man, Woman, Non-binary, Everyone]
+        relationshipGoal:
+          type: string
+          enum: [serious, casual, friendship, marriage, adventure, undecided, language_exchange, networking, open]
+        primaryLanguage:
+          type: string
+          minLength: 1
+          maxLength: 80
+        otherLanguages:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        learningLanguages:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        country:
+          type: string
+          minLength: 1
+          maxLength: 100
+        city:
+          type: string
+          maxLength: 100
+        countriesOfInterest:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        culturalInterests:
+          type: array
+          maxItems: 30
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        interests:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        travelGoals:
+          type: string
+          maxLength: 500
+        longDistanceOpenness:
+          type: boolean
+        relocationOpenness:
+          type: boolean
+        communicationPreferences:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+        preferredMinAge:
+          type: number
+          minimum: 18
+          maximum: 100
+          multipleOf: 1
+        preferredMaxAge:
+          type: number
+          minimum: 18
+          maximum: 100
+          multipleOf: 1
+        preferredGender:
+          type: string
+          enum: [Man, Woman, Non-binary, Everyone]
+
+    ProfilePhoto:
+      type: object
+      required: [id, url, position, isPrimary]
+      properties:
+        id:
+          type: number
+          multipleOf: 1
+        url:
+          type: string
+        position:
+          type: number
+          multipleOf: 1
+        isPrimary:
+          type: boolean
+
+    PhotoUploadInput:
+      type: object
+      required: [photo]
+      properties:
+        photo:
+          type: string
+
+    PhotoReorderInput:
+      type: object
+      additionalProperties: false
+      required: [position]
+      properties:
+        position:
+          type: number
+          minimum: 0
+          multipleOf: 1
+
+    VoiceUploadInput:
+      type: object
+      required: [audio]
+      properties:
+        audio:
+          type: string
+
+    PublicProfile:
+      type: object
+      required: [id, userId, name]
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        name:
+          type: string
+        age:
+          type: ["number", "null"]
+        bio:
+          type: ["string", "null"]
+        occupation:
+          type: ["string", "null"]
+        height:
+          type: ["number", "null"]
+        gender:
+          type: ["string", "null"]
+        primaryLanguage:
+          type: ["string", "null"]
+        otherLanguages:
+          type: array
+          items:
+            type: string
+        country:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        culturalInterests:
+          type: array
+          items:
+            type: string
+        interests:
+          type: array
+          items:
+            type: string
+        relationshipGoal:
+          type: ["string", "null"]
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfilePhoto"
+        voiceIntroUrl:
+          type: ["string", "null"]
+        isVerified:
+          type: boolean
+        role:
+          type: ["string", "null"]
+          description: Participant role within a group conversation (owner, admin, member)
+
+    ProfileCompletion:
+      type: object
+      required: [percent, isComplete, missedSteps]
+      properties:
+        percent:
+          type: number
+        isComplete:
+          type: boolean
+        missedSteps:
+          type: array
+          items:
+            type: string
+
+    DiscoveryPreferencesInput:
+      type: object
+      properties:
+        discoveryEnabled:
+          type: boolean
+        globalDiscovery:
+          type: boolean
+        preferredMinAge:
+          type: number
+        preferredMaxAge:
+          type: number
+        preferredGender:
+          type: string
+
+    # ── DISCOVER ──────────────────────────────────────────────────────────
+    DiscoverCard:
+      type: object
+      required: [userId, profile]
+      properties:
+        userId:
+          type: number
+        profile:
+          $ref: "#/components/schemas/PublicProfile"
+        distanceKm:
+          type: ["number", "null"]
+        sharedInterests:
+          type: array
+          items:
+            type: string
+        sharedLanguages:
+          type: array
+          items:
+            type: string
+
+    SwipeInput:
+      type: object
+      required: [targetUserId, action]
+      properties:
+        targetUserId:
+          type: number
+        action:
+          type: string
+          enum: [like, pass, superlike]
+        idempotencyKey:
+          type: ["string", "null"]
+
+    SwipeResult:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+        isMatch:
+          type: boolean
+        match:
+          $ref: "#/components/schemas/Match"
+        conversationId:
+          type: ["number", "null"]
+
+    DiscoverFilters:
+      type: object
+      required:
+        [
+          minAge,
+          maxAge,
+          gender,
+          globalMode,
+          interestsOverlap,
+          verifiedOnly,
+          longDistance,
+          relocation,
+        ]
+      properties:
+        minAge:
+          type: number
+        maxAge:
+          type: number
+        gender:
+          type: ["string", "null"]
+          enum: [male, female, non_binary, null]
+        countries:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        globalMode:
+          type: boolean
+        relationshipGoal:
+          type: ["string", "null"]
+        interestsOverlap:
+          type: boolean
+        verifiedOnly:
+          type: boolean
+        longDistance:
+          type: boolean
+        relocation:
+          type: boolean
+
+    DiscoverFiltersInput:
+      type: object
+      properties:
+        minAge:
+          type: number
+        maxAge:
+          type: number
+        gender:
+          type: ["string", "null"]
+        countries:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        globalMode:
+          type: boolean
+        relationshipGoal:
+          type: ["string", "null"]
+        interestsOverlap:
+          type: boolean
+        verifiedOnly:
+          type: boolean
+        longDistance:
+          type: boolean
+        relocation:
+          type: boolean
+
+    # ── MATCHES ───────────────────────────────────────────────────────────
+    Match:
+      type: object
+      required: [id, userId1, userId2, createdAt]
+      properties:
+        id:
+          type: number
+        userId1:
+          type: number
+        userId2:
+          type: number
+        conversationId:
+          type: ["number", "null"]
+        otherUser:
+          $ref: "#/components/schemas/PublicProfile"
+        createdAt:
+          type: string
+          format: date-time
+
+    MatchStats:
+      type: object
+      required: [totalMatches, newMatchesThisWeek, activeConversations]
+      properties:
+        totalMatches:
+          type: number
+        newMatchesThisWeek:
+          type: number
+        activeConversations:
+          type: number
+        superlikesSent:
+          type: number
+
+    # ── CONVERSATIONS ──────────────────────────────────────────────────────
+    Conversation:
+      type: object
+      required: [id, type, translationEnabled, translationLanguage, createdAt]
+      properties:
+        id:
+          type: number
+        type:
+          type: string
+          enum: [direct, group]
+        matchId:
+          type: ["number", "null"]
+        title:
+          type: ["string", "null"]
+        ownerId:
+          type: ["number", "null"]
+        myRole:
+          type: ["string", "null"]
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicProfile"
+        lastMessage:
+          $ref: "#/components/schemas/Message"
+        unreadCount:
+          type: number
+        isPinned:
+          type: boolean
+        isMuted:
+          type: boolean
+        translationEnabled:
+          type: boolean
+          description: Current viewer's personal Translate for me preference.
+        translationLanguage:
+          oneOf:
+            - $ref: "#/components/schemas/LanguageCode"
+            - type: "null"
+          description: Current viewer's canonical translation target.
+        recipientTranslationLanguage:
+          oneOf:
+            - $ref: "#/components/schemas/LanguageCode"
+            - type: "null"
+          description: Direct chats only; the other participant's configured target or normalized primary language.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PinInput:
+      type: object
+      required: [pinned]
+      properties:
+        pinned:
+          type: boolean
+
+    MuteInput:
+      type: object
+      required: [muted]
+      properties:
+        muted:
+          type: boolean
+
+    CreateGroupInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        participantIds:
+          type: array
+          items:
+            type: number
+
+    AddMemberInput:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: number
+
+    SetMemberRoleInput:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [admin, member]
+
+    LanguageCode:
+      type: string
+      enum: [en, ja, pt, fr, es, ko, de, it, ru, zh-CN, ar, th, vi, id, hi, lo]
+
+    TranslationPreferenceInput:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageCode"
+
+    TranslationPreference:
+      type: object
+      required: [conversationId, translationEnabled]
+      properties:
+        conversationId:
+          type: number
+        translationEnabled:
+          type: boolean
+        translationLanguage:
+          oneOf:
+            - $ref: "#/components/schemas/LanguageCode"
+            - type: "null"
+
+    # ── MESSAGES ──────────────────────────────────────────────────────────
+    Message:
+      type: object
+      required: [id, conversationId, senderId, detectionStatus, createdAt]
+      properties:
+        id:
+          type: number
+        conversationId:
+          type: number
+        senderId:
+          type: number
+        content:
+          type: ["string", "null"]
+        contentType:
+          type: string
+          enum: [text, image, audio, voice, system]
+        attachmentUrl:
+          type: ["string", "null"]
+        isDeleted:
+          type: boolean
+        reactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageReaction"
+        translations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Translation"
+        detectedLanguage:
+          oneOf:
+            - $ref: "#/components/schemas/LanguageCode"
+            - type: "null"
+        detectionStatus:
+          type: string
+          enum: [unknown, pending, done, failed, not_applicable]
+        detectedLanguageAt:
+          type: ["string", "null"]
+          format: date-time
+        detectionError:
+          type: ["string", "null"]
+        isRead:
+          type: boolean
+        clientRequestId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    MessageInput:
+      type: object
+      properties:
+        content:
+          type: ["string", "null"]
+        contentType:
+          type: string
+          enum: [text, image, audio, voice]
+          default: text
+        attachmentUrl:
+          type: ["string", "null"]
+        idempotencyKey:
+          type: ["string", "null"]
+          deprecated: true
+          description: Legacy alias for clientRequestId.
+        clientRequestId:
+          type: ["string", "null"]
+          maxLength: 128
+
+    MessageReaction:
+      type: object
+      required: [userId, emoji]
+      properties:
+        userId:
+          type: number
+        emoji:
+          type: string
+
+    ReactionInput:
+      type: object
+      required: [emoji]
+      properties:
+        emoji:
+          type: string
+
+    TranslateInput:
+      type: object
+      required: [targetLanguage]
+      properties:
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageCode"
+
+    Translation:
+      type: object
+      required: [messageId, targetLanguage, status]
+      properties:
+        id:
+          type: number
+        messageId:
+          type: number
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageCode"
+        sourceLanguage:
+          oneOf:
+            - $ref: "#/components/schemas/LanguageCode"
+            - type: "null"
+        translatedContent:
+          type: ["string", "null"]
+        translatedText:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, done, failed, same_language]
+        error:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TranslationPreviewInput:
+      type: object
+      required: [content, targetLanguage]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageCode"
+
+    TranslationPreviewResult:
+      type: object
+      required: [originalContent, targetLanguage, status]
+      properties:
+        originalContent:
+          type: string
+          description: Exact unchanged draft supplied by the caller.
+        translatedContent:
+          type: ["string", "null"]
+        sourceLanguage:
+          oneOf:
+            - $ref: "#/components/schemas/LanguageCode"
+            - type: "null"
+        targetLanguage:
+          $ref: "#/components/schemas/LanguageCode"
+        status:
+          type: string
+          enum: [done, same_language, failed]
+        error:
+          type: ["string", "null"]
+
+    AttachmentUploadInput:
+      type: object
+      required: [objectPath, uploadToken]
+      properties:
+        objectPath:
+          type: string
+          description: Secure object storage path returned by the presigned upload flow (starts with /objects/)
+        type:
+          type: string
+          enum: [image, audio, voice]
+        uploadToken:
+          type: string
+          description: >-
+            Signed upload claim from the presign response, binding this exact
+            objectPath, uploader, attachment purpose, and conversation.
+
+    AttachmentUploadResult:
+      type: object
+      required: [url, type]
+      properties:
+        url:
+          type: string
+        type:
+          type: string
+
+    TranscribeInput:
+      type: object
+      required: [objectPath]
+      properties:
+        objectPath:
+          type: string
+
+    TranscribeResult:
+      type: object
+      required: [transcript]
+      properties:
+        transcript:
+          type: string
+
+    # ── PREMIUM ───────────────────────────────────────────────────────────
+    PremiumPlan:
+      type: object
+      required: [id, name, interval, price, currency]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        interval:
+          type: string
+          enum: [weekly, monthly, annual]
+        price:
+          type: number
+        currency:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+        superlikesPerDay:
+          type: number
+
+    PremiumSubscription:
+      type: object
+      required: [id, userId, status]
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        planId:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: Authoritative Stripe status for web subscriptions, or the synthesized native/no-subscription state.
+          enum: [active, trialing, past_due, canceled, unpaid, paused, incomplete, incomplete_expired, expired, none]
+        cancelAtPeriodEnd:
+          type: boolean
+        currentPeriodEnd:
+          type: ["string", "null"]
+          format: date-time
+        nextBillingDate:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: ["string", "null"]
+          format: date-time
+        provider:
+          type: ["string", "null"]
+          enum: [stripe, revenuecat, null]
+
+    NativePremiumReconciliation:
+      type: object
+      required: [appUserId, entitlementId, provider, isActive, isPremium, verifiedAt, cacheValidUntil]
+      properties:
+        appUserId:
+          type: string
+          pattern: "^los_user_[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+        entitlementId:
+          type: string
+          const: premium
+        provider:
+          type: string
+          const: revenuecat
+        isActive:
+          type: boolean
+        isPremium:
+          type: boolean
+          description: Effective access after preserving any valid Stripe subscription.
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+        verifiedAt:
+          type: string
+          format: date-time
+        cacheValidUntil:
+          type: string
+          format: date-time
+
+    SubscribeInput:
+      type: object
+      required: [planId]
+      properties:
+        planId:
+          type: string
+        platform:
+          type: string
+          enum: [web, ios, android]
+          default: web
+
+    SubscribeResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        checkoutUrl:
+          type: ["string", "null"]
+        subscription:
+          $ref: "#/components/schemas/PremiumSubscription"
+        message:
+          type: ["string", "null"]
+
+    SuperlikeBalance:
+      type: object
+      required: [remaining, dailyLimit, resetAt]
+      properties:
+        remaining:
+          type: number
+        dailyLimit:
+          type: number
+        resetAt:
+          type: string
+          format: date-time
+
+    # ── VERIFICATION ──────────────────────────────────────────────────────
+    VerificationRequest:
+      type: object
+      required: [id, userId, status]
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        selfieUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        adminNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    VerificationRequestInput:
+      type: object
+      required: [selfie]
+      properties:
+        selfie:
+          type: string
+          description: PNG, JPEG, or WebP image bytes. Maximum size is 5 MB.
+
+    BookingCheckoutInput:
+      type: object
+      properties:
+        returnPath:
+          type: string
+          description: Safe same-origin path to return to after hosted checkout.
+
+    BookingCheckoutResult:
+      type: object
+      required: [paymentId, checkoutUrl, amount, currency, status]
+      properties:
+        paymentId:
+          type: number
+        checkoutUrl:
+          type: string
+        amount:
+          type: number
+          description: Server-owned amount in currency minor units.
+        currency:
+          type: string
+        status:
+          type: string
+
+    BookingPaymentIntentResult:
+      type: object
+      required: [paymentId, amount, currency, status]
+      properties:
+        paymentId:
+          type: number
+        clientSecret:
+          type: ["string", "null"]
+        amount:
+          type: number
+        currency:
+          type: string
+        status:
+          type: string
+
+    BookingPaymentStatus:
+      type: object
+      required: [configured, amount, currency, status]
+      properties:
+        configured:
+          type: boolean
+        amount:
+          type: number
+        currency:
+          type: string
+        status:
+          type: string
+        lastError:
+          type: ["string", "null"]
+        refund:
+          oneOf:
+            - $ref: "#/components/schemas/PaymentAmountStatus"
+            - type: "null"
+        payout:
+          oneOf:
+            - $ref: "#/components/schemas/CoachPayoutStatus"
+            - type: "null"
+
+    PaymentAmountStatus:
+      type: object
+      required: [status, amount]
+      properties:
+        status:
+          type: string
+        amount:
+          type: number
+
+    CoachPayoutStatus:
+      type: object
+      required: [status, amount]
+      properties:
+        status:
+          type: string
+        payoutStatus:
+          type: ["string", "null"]
+        amount:
+          type: number
+
+    BookingRefundResult:
+      type: object
+      required: [refundId, status, amount]
+      properties:
+        refundId:
+          type: number
+        status:
+          type: string
+        amount:
+          type: number
+
+    PaymentReconciliation:
+      type: object
+      required: [configured, pendingPayments, pendingTransfers, pendingRefunds]
+      properties:
+        configured:
+          type: boolean
+        pendingPayments:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        pendingTransfers:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        pendingRefunds:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    VerificationReviewInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        adminNotes:
+          type: ["string", "null"]
+
+    # ── COACHES ───────────────────────────────────────────────────────────
+    Coach:
+      type: object
+      required: [id, userId, displayName]
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        displayName:
+          type: string
+        bio:
+          type: ["string", "null"]
+        photoUrl:
+          type: ["string", "null"]
+        specialties:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        sessionLengthsMinutes:
+          type: array
+          items:
+            type: number
+        ratesPerHour:
+          type: ["number", "null"]
+        currency:
+          type: string
+          default: USD
+        rating:
+          type: ["number", "null"]
+        reviewCount:
+          type: number
+        isVerified:
+          type: boolean
+        verificationStatus:
+          type: string
+          enum: [pending, approved, rejected, unsubmitted]
+        isPayoutReady:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    CoachCredentialInput:
+      type: object
+      required: [objectPath, uploadToken, kind, originalName, contentType, size]
+      properties:
+        objectPath:
+          type: string
+          pattern: '^/objects/'
+        uploadToken:
+          type: string
+        kind:
+          type: string
+          enum: [certification, id_document, background_check, resume]
+        title:
+          type: ["string", "null"]
+          maxLength: 200
+        originalName:
+          type: string
+          maxLength: 255
+        contentType:
+          type: string
+          enum: [application/pdf, image/jpeg, image/png]
+        size:
+          type: number
+          minimum: 1
+          maximum: 10485760
+
+    CoachCredential:
+      type: object
+      required: [id, coachId, kind, originalName, contentType, size, status, createdAt]
+      properties:
+        id:
+          type: number
+        coachId:
+          type: number
+        kind:
+          type: string
+        title:
+          type: ["string", "null"]
+        originalName:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: number
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        documentUrl:
+          type: string
+          description: Admin-only streaming URL; never a raw private object path.
+        createdAt:
+          type: string
+          format: date-time
+
+    CoachInput:
+      type: object
+      required: [displayName, availability]
+      properties:
+        displayName:
+          type: string
+        availability:
+          $ref: "#/components/schemas/AvailabilityInput"
+        bio:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        sessionLengthsMinutes:
+          type: array
+          items:
+            type: number
+        ratesPerHour:
+          type: number
+        currency:
+          type: string
+
+    CoachUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+        bio:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        sessionLengthsMinutes:
+          type: array
+          items:
+            type: number
+        ratesPerHour:
+          type: number
+        currency:
+          type: string
+
+    TimeSlot:
+      type: object
+      required: [startAt, endAt, available]
+      properties:
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        available:
+          type: boolean
+
+    AvailabilityInput:
+      type: object
+      required: [slots, timeZone]
+      properties:
+        timeZone:
+          type: string
+          description: IANA timezone for the recurring local availability times
+        slots:
+          type: array
+          items:
+            type: object
+            required: [dayOfWeek, startTime, endTime]
+            properties:
+              dayOfWeek:
+                type: number
+              startTime:
+                type: string
+              endTime:
+                type: string
+
+    Review:
+      type: object
+      required: [id, coachId, clientId, rating, createdAt]
+      properties:
+        id:
+          type: number
+        coachId:
+          type: number
+        clientId:
+          type: number
+        bookingId:
+          type: ["number", "null"]
+        rating:
+          type: number
+        comment:
+          type: ["string", "null"]
+        clientName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ReviewInput:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        comment:
+          type: ["string", "null"]
+
+    CoachDashboard:
+      type: object
+      required: [totalBookings, totalRevenue, totalClients, avgRating]
+      properties:
+        totalBookings:
+          type: number
+        pendingBookings:
+          type: number
+        totalRevenue:
+          type: number
+        totalClients:
+          type: number
+        avgRating:
+          type: ["number", "null"]
+        upcomingBookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+
+    CoachVerifyInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        notes:
+          type: ["string", "null"]
+
+    CoachVerificationSubmitInput:
+      type: object
+      properties:
+        notes:
+          type: ["string", "null"]
+
+    CoachPayoutInput:
+      type: object
+      required: [isPayoutReady]
+      properties:
+        isPayoutReady:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+
+    CoachAuditEvent:
+      type: object
+      required: [id, coachId, actorUserId, field, action, createdAt]
+      properties:
+        id:
+          type: number
+        coachId:
+          type: number
+        actorUserId:
+          type: number
+        field:
+          type: string
+          enum: [verification, payout]
+        action:
+          type: string
+        previousValue:
+          type: ["string", "null"]
+        newValue:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        actor:
+          type: ["object", "null"]
+          properties:
+            id:
+              type: number
+            name:
+              type: string
+            email:
+              type: string
+
+    # ── BOOKINGS ──────────────────────────────────────────────────────────
+    Booking:
+      type: object
+      required: [id, coachId, clientId, status, scheduledAt, durationMinutes]
+      properties:
+        id:
+          type: number
+        coachId:
+          type: number
+        clientId:
+          type: number
+        coach:
+          $ref: "#/components/schemas/Coach"
+        status:
+          type: string
+          enum: [pending, confirmed, completed, cancelled, no_show]
+        scheduledAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: number
+        rateAtBooking:
+          type: ["number", "null"]
+        currency:
+          type: string
+        notes:
+          type: ["string", "null"]
+        coachNotes:
+          type: ["string", "null"]
+        zoomLink:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    BookingInput:
+      type: object
+      required: [coachId, scheduledAt, durationMinutes]
+      properties:
+        coachId:
+          type: number
+        scheduledAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: number
+        notes:
+          type: ["string", "null"]
+
+    CoachNoteInput:
+      type: object
+      required: [notes]
+      properties:
+        notes:
+          type: string
+
+    # ── CLIENT SUBSCRIPTIONS ──────────────────────────────────────────────
+    ClientSubscription:
+      type: object
+      required: [id, coachId, clientId, status]
+      properties:
+        id:
+          type: number
+        coachId:
+          type: number
+        clientId:
+          type: number
+        coach:
+          $ref: "#/components/schemas/Coach"
+        planName:
+          type: ["string", "null"]
+        sessionsPerMonth:
+          type: ["number", "null"]
+        monthlyRate:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [active, paused, cancelled]
+        startedAt:
+          type: string
+          format: date-time
+        nextBillingAt:
+          type: ["string", "null"]
+          format: date-time
+
+    ClientSubscriptionInput:
+      type: object
+      required: [coachId, sessionsPerMonth, monthlyRate]
+      properties:
+        coachId:
+          type: number
+        planName:
+          type: ["string", "null"]
+        sessionsPerMonth:
+          type: number
+        monthlyRate:
+          type: number
+
+    CoachingPlan:
+      type: object
+      required: [id, clientId, coachId, title]
+      properties:
+        id:
+          type: number
+        clientId:
+          type: number
+        coachId:
+          type: number
+        title:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+        currentProgressPercent:
+          type: number
+        milestones:
+          type: array
+          items:
+            type: string
+        notes:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProgressUpdate:
+      type: object
+      properties:
+        currentProgressPercent:
+          type: number
+        notes:
+          type: ["string", "null"]
+        milestones:
+          type: array
+          items:
+            type: string
+
+    # ── GROUP WORKSHOPS ───────────────────────────────────────────────────
+    GroupWorkshop:
+      type: object
+      required: [id, coachId, title, scheduledAt, maxParticipants]
+      properties:
+        id:
+          type: number
+        coachId:
+          type: number
+        coach:
+          $ref: "#/components/schemas/Coach"
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        scheduledAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: number
+        maxParticipants:
+          type: number
+        currentParticipants:
+          type: number
+        price:
+          type: ["number", "null"]
+        currency:
+          type: string
+        zoomLink:
+          type: ["string", "null"]
+        isEnrolled:
+          type: boolean
+
+    WorkshopInput:
+      type: object
+      required: [title, scheduledAt, durationMinutes, maxParticipants]
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        scheduledAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: number
+        maxParticipants:
+          type: number
+        price:
+          type: ["number", "null"]
+        currency:
+          type: string
+
+    # ── CULTURAL ──────────────────────────────────────────────────────────
+    CulturalPassport:
+      type: object
+      required: [userId, stampCount, countriesVisited, level]
+      properties:
+        userId:
+          type: number
+        stampCount:
+          type: number
+        countriesVisited:
+          type: array
+          items:
+            type: string
+        level:
+          type: string
+        xpPoints:
+          type: number
+        stamps:
+          type: array
+          items:
+            $ref: "#/components/schemas/CulturalStamp"
+
+    CulturalStamp:
+      type: object
+      required: [id, country, earnedAt]
+      properties:
+        id:
+          type: number
+        country:
+          type: string
+        title:
+          type: string
+        iconUrl:
+          type: ["string", "null"]
+        earnedAt:
+          type: string
+          format: date-time
+
+    CulturalFact:
+      type: object
+      required: [id, country, fact]
+      properties:
+        id:
+          type: number
+        country:
+          type: string
+        fact:
+          type: string
+        category:
+          type: ["string", "null"]
+        status:
+          type: string
+        message:
+          type: string
+
+    LeaderboardEntry:
+      type: object
+      required: [rank, userId, name, passportScore, engagementScore, totalScore]
+      properties:
+        rank:
+          type: number
+        userId:
+          type: number
+        name:
+          type: string
+        country:
+          type: ["string", "null"]
+        passportScore:
+          type: number
+        engagementScore:
+          type: number
+        totalScore:
+          type: number
+        isCurrentUser:
+          type: boolean
+
+    CulturalEvent:
+      type: object
+      required: [id, title, country, date]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        country:
+          type: string
+        date:
+          type: string
+          format: date-time
+        imageUrl:
+          type: ["string", "null"]
+        isRsvped:
+          type: boolean
+
+    Tribe:
+      type: object
+      required: [id, name, memberCount]
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        language:
+          type: ["string", "null"]
+        iconUrl:
+          type: ["string", "null"]
+        memberCount:
+          type: number
+        isMember:
+          type: boolean
+
+    ConversationStarter:
+      type: object
+      required: [id, text]
+      properties:
+        id:
+          type: number
+        text:
+          type: string
+        country:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+
+    # ── LANGUAGE LEARNING ─────────────────────────────────────────────────
+    LanguageStreak:
+      type: object
+      required: [currentStreak, longestStreak, xpTotal, level]
+      properties:
+        currentStreak:
+          type: number
+        longestStreak:
+          type: number
+        xpTotal:
+          type: number
+        level:
+          type: string
+        lastActivityAt:
+          type: ["string", "null"]
+          format: date-time
+
+    LanguageQuiz:
+      type: object
+      required: [id, title, language, category, questionCount, difficulty, xpReward, questions]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        language:
+          type: string
+        category:
+          type: string
+          enum: [vocabulary, grammar, comprehension, cultural]
+        questionCount:
+          type: number
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        xpReward:
+          type: number
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LanguageQuizQuestion"
+
+    LanguageQuizQuestion:
+      type: object
+      required: [id, text, options]
+      properties:
+        id:
+          type: number
+        text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+
+    QuizAttemptInput:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            required: [questionId, answer]
+            properties:
+              questionId:
+                type: number
+              answer:
+                type: string
+
+    QuizAttemptResult:
+      type: object
+      required: [score, total, passed, xpEarned]
+      properties:
+        score:
+          type: number
+        total:
+          type: number
+        passed:
+          type: boolean
+        xpEarned:
+          type: number
+        feedback:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                type: number
+              correct:
+                type: boolean
+              correctAnswer:
+                type: string
+
+    AiCoachInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        targetLanguage:
+          type: ["string", "null"]
+        mode:
+          type: string
+          enum: [practice, correction, cultural, freeform]
+          default: freeform
+
+    AiCoachResponse:
+      type: object
+      required: [reply]
+      properties:
+        reply:
+          type: string
+        corrections:
+          type: array
+          items:
+            type: string
+        vocabulary:
+          type: array
+          items:
+            type: string
+        culturalNote:
+          type: ["string", "null"]
+
+    AiCoachMessage:
+      type: object
+      required: [id, role, content, createdAt]
+      properties:
+        id:
+          type: number
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── SAFETY ────────────────────────────────────────────────────────────
+    BlockInput:
+      type: object
+      required: [blockedUserId]
+      properties:
+        blockedUserId:
+          type: number
+        reason:
+          type: ["string", "null"]
+
+    BlockedUser:
+      type: object
+      required: [id, blockedUserId, createdAt]
+      properties:
+        id:
+          type: number
+        blockedUserId:
+          type: number
+        blockedUser:
+          $ref: "#/components/schemas/PublicProfile"
+        createdAt:
+          type: string
+          format: date-time
+
+    ReportInput:
+      type: object
+      required: [reportedUserId, reason]
+      properties:
+        reportedUserId:
+          type: number
+        reason:
+          type: string
+        description:
+          type: ["string", "null"]
+        messageId:
+          type: ["number", "null"]
+
+    SafetyUserResolution:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: number
+
+    SafetyTip:
+      type: object
+      required: [id, title, body]
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        body:
+          type: string
+        category:
+          type: string
+
+    # ── NOTIFICATIONS ─────────────────────────────────────────────────────
+    Notification:
+      type: object
+      required: [id, userId, type, isRead, createdAt]
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        type:
+          type: string
+          enum: [match, message, like, superlike, verification, premium, booking, system]
+        title:
+          type: string
+        body:
+          type: string
+        isRead:
+          type: boolean
+        relatedId:
+          type: ["number", "null"]
+        relatedType:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    PushTokenInput:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+        platform:
+          type: string
+        provider:
+          type: string
+
+    PushToken:
+      type: object
+      required: [id, platform, provider, isActive]
+      properties:
+        id:
+          type: number
+        platform:
+          type: string
+        provider:
+          type: string
+        isActive:
+          type: boolean
+
+    NotificationPreferencesInput:
+      type: object
+      additionalProperties: false
+      required: [pushEnabled, emailEnabled, bookingEnabled]
+      properties:
+        pushEnabled:
+          type: boolean
+        emailEnabled:
+          type: boolean
+        bookingEnabled:
+          type: boolean
+        showOnlineStatus:
+          type: boolean
+        readReceipts:
+          type: boolean
+
+    NotificationPreferences:
+      type: object
+      additionalProperties: false
+      required: [pushEnabled, emailEnabled, bookingEnabled, showOnlineStatus, readReceipts]
+      properties:
+        pushEnabled:
+          type: boolean
+        emailEnabled:
+          type: boolean
+        bookingEnabled:
+          type: boolean
+        showOnlineStatus:
+          type: boolean
+        readReceipts:
+          type: boolean
+
+    NotificationDelivery:
+      type: object
+      required: [id, notificationId, channel, status, attempts]
+      properties:
+        id:
+          type: number
+        notificationId:
+          type: number
+        channel:
+          type: string
+        status:
+          type: string
+        attempts:
+          type: number
+        lastError:
+          type: ["string", "null"]
+        nextRetryAt:
+          type: ["string", "null"]
+          format: date-time
+        sentAt:
+          type: ["string", "null"]
+          format: date-time
+
+    UnreadCount:
+      type: object
+      required: [notifications, messages, matches]
+      properties:
+        notifications:
+          type: number
+        messages:
+          type: number
+        matches:
+          type: number
+
+    # ── ADMIN ─────────────────────────────────────────────────────────────
+    AdminUser:
+      type: object
+      required: [id, email, name, role, createdAt]
+      properties:
+        id:
+          type: number
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        isRestricted:
+          type: boolean
+        restrictionReason:
+          type: ["string", "null"]
+        moderationScore:
+          type: ["number", "null"]
+        isPremium:
+          type: boolean
+        isVerified:
+          type: boolean
+        reportCount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminUserList:
+      type: object
+      required: [users, total]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"
+        total:
+          type: number
+
+    AdminUserUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, coach, admin]
+        isRestricted:
+          type: boolean
+        restrictionReason:
+          type: ["string", "null"]
+
+    UserReport:
+      type: object
+      required: [id, reporterId, reportedUserId, reason, status, createdAt]
+      properties:
+        id:
+          type: number
+        reporterId:
+          type: number
+        reportedUserId:
+          type: number
+        reason:
+          type: string
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, reviewed, dismissed, actioned]
+        adminNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    ReportReviewInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [reviewed, dismissed, actioned]
+        adminNotes:
+          type: ["string", "null"]
+        restrictUser:
+          type: boolean
+          default: false
+
+    AdminAnalytics:
+      type: object
+      required: [totalUsers, totalMatches, activeSubscriptions, totalCoaches]
+      properties:
+        totalUsers:
+          type: number
+        newUsersThisWeek:
+          type: number
+        totalMatches:
+          type: number
+        activeSubscriptions:
+          type: number
+        totalCoaches:
+          type: number
+        pendingReports:
+          type: number
+        pendingVerifications:
+          type: number
+        totalMessages:
+          type: number
+        topCountries:
+          type: array
+          items:
+            type: object
+            properties:
+              country:
+                type: string
+              count:
+                type: number

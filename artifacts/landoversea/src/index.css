@@ -1,0 +1,340 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Pacifico&display=swap');
+
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-placeholder: hsl(var(--placeholder-foreground));
+  --color-disabled: hsl(var(--disabled));
+  --color-disabled-foreground: hsl(var(--disabled-foreground));
+  --color-navigation: hsl(var(--navigation));
+  --color-navigation-foreground: hsl(var(--navigation-foreground));
+  --color-navigation-muted-foreground: hsl(var(--navigation-muted-foreground));
+  --color-brand-surface-foreground: hsl(var(--brand-surface-foreground));
+  --color-fixed-dark-foreground: hsl(var(--fixed-dark-foreground));
+  --color-fixed-dark-muted-foreground: hsl(var(--fixed-dark-muted-foreground));
+  --color-glass-foreground: hsl(var(--glass-foreground));
+  --color-glass-border: var(--glass-border);
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+  --font-script: 'Pacifico', cursive;
+  --app-font-sans: 'Inter', sans-serif;
+  --app-font-serif: 'Playfair Display', serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Opt the whole document into system light/dark so native form controls,
+     scrollbars, and the browser UI follow the OS appearance. */
+  color-scheme: light dark;
+
+  /* Height of the mobile bottom nav bar (excluding the safe-area inset). */
+  --mobile-nav-height: 4rem;
+  /* Total space the shell must reserve for the bottom nav = bar + safe area. */
+  --mobile-nav-space: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+
+  --background: 260 100% 4%;
+  --foreground: 0 0% 100%;
+
+  --card: 260 60% 8%;
+  --card-foreground: 0 0% 100%;
+  --card-border: 260 30% 15%;
+
+  --popover: 260 60% 8%;
+  --popover-foreground: 0 0% 100%;
+  --popover-border: 260 30% 15%;
+
+  --primary: 337 100% 59%;
+  --primary-foreground: 260 100% 4%;
+
+  --secondary: 258 89% 66%;
+  --secondary-foreground: 260 100% 4%;
+
+  --muted: 260 40% 12%;
+  --muted-foreground: 260 20% 60%;
+  --placeholder-foreground: 260 20% 68%;
+  --disabled: 260 34% 15%;
+  --disabled-foreground: 260 20% 68%;
+
+  --accent: 191 100% 69%;
+  --accent-foreground: 260 100% 4%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 260 100% 4%;
+
+  --border: 260 30% 20%;
+  --input: 260 40% 10%;
+  --ring: 337 100% 59%;
+
+  --button-outline: rgba(255, 255, 255, 0.1);
+  --badge-outline: rgba(255, 255, 255, 0.05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255, 255, 255, 0.04);
+  --elevate-2: rgba(255, 255, 255, 0.09);
+
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Galaxy body gradient stops — overridden by the light scheme below so the
+     background follows the OS appearance without a fake inversion. */
+  --galaxy-glow-violet: rgba(139, 92, 246, 0.35);
+  --galaxy-glow-pink: rgba(255, 45, 122, 0.25);
+  --galaxy-glow-core: rgba(22, 8, 47, 0.9);
+  --galaxy-gradient: linear-gradient(180deg, #080014 0%, #16082F 55%, #2B1454 100%);
+
+  /* Glass surface tokens — the light scheme tints these so the glass identity
+     stays legible on a bright background (accessible contrast, not inverted). */
+  --glass-bg: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-strong-bg: rgba(255, 255, 255, 0.11);
+  --glass-strong-border: rgba(255, 255, 255, 0.18);
+  --glass-input-bg: rgba(255, 255, 255, 0.06);
+  --glass-input-border: rgba(255, 255, 255, 0.15);
+  --glass-input-fg: #ffffff;
+  --glass-foreground: 0 0% 100%;
+
+  --nav-bg: rgba(8, 0, 20, 0.88);
+  --nav-border: rgba(255, 255, 255, 0.10);
+  --navigation: 260 100% 4%;
+  --navigation-foreground: 0 0% 100%;
+  --navigation-muted-foreground: 260 20% 68%;
+  --brand-surface-foreground: 260 100% 4%;
+  --fixed-dark-foreground: 0 0% 100%;
+  --fixed-dark-muted-foreground: 270 35% 88%;
+}
+
+/*
+ * Light appearance. We keep the LandOverSEA galaxy/glass identity — the same
+ * violet→pink cosmic wash and frosted glass surfaces — but retune the palette
+ * for a light surface with WCAG-legible foreground contrast. This is a
+ * purpose-built light theme, NOT a CSS `invert()` of the dark one.
+ */
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: 258 60% 97%;
+    --foreground: 260 55% 12%;
+
+    --card: 258 55% 99%;
+    --card-foreground: 260 55% 12%;
+    --card-border: 260 25% 85%;
+
+    --popover: 258 55% 99%;
+    --popover-foreground: 260 55% 12%;
+    --popover-border: 260 25% 85%;
+
+    /* Deepen brand hues slightly so they hold contrast on light surfaces. */
+    --primary: 337 84% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 258 70% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 258 40% 92%;
+    --muted-foreground: 260 25% 38%;
+    --placeholder-foreground: 260 25% 34%;
+    --disabled: 258 40% 90%;
+    --disabled-foreground: 260 25% 34%;
+
+    --accent: 191 80% 38%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 260 25% 82%;
+    --input: 258 40% 94%;
+    --ring: 337 84% 48%;
+
+    --button-outline: rgba(20, 8, 40, 0.12);
+    --badge-outline: rgba(20, 8, 40, 0.08);
+    --elevate-1: rgba(20, 8, 40, 0.04);
+    --elevate-2: rgba(20, 8, 40, 0.09);
+
+    /* Lighter cosmic wash + light glass surfaces with dark, readable text. */
+    --galaxy-glow-violet: rgba(139, 92, 246, 0.22);
+    --galaxy-glow-pink: rgba(255, 45, 122, 0.16);
+    --galaxy-glow-core: rgba(232, 224, 250, 0.9);
+    --galaxy-gradient: linear-gradient(180deg, #F4F0FF 0%, #ECE4FB 55%, #E4D8F7 100%);
+
+    --glass-bg: rgba(255, 255, 255, 0.55);
+    --glass-border: rgba(40, 18, 74, 0.12);
+    --glass-strong-bg: rgba(255, 255, 255, 0.72);
+    --glass-strong-border: rgba(40, 18, 74, 0.16);
+    --glass-input-bg: rgba(255, 255, 255, 0.7);
+    --glass-input-border: rgba(40, 18, 74, 0.18);
+    --glass-input-fg: hsl(260 55% 12%);
+    --glass-foreground: 260 55% 12%;
+
+    --nav-bg: rgba(255, 255, 255, 0.85);
+    --nav-border: rgba(40, 18, 74, 0.12);
+    --navigation: 258 55% 99%;
+    --navigation-foreground: 260 55% 12%;
+    --navigation-muted-foreground: 260 25% 34%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased text-foreground;
+    background:
+      radial-gradient(ellipse at 20% 10%, var(--galaxy-glow-violet) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 80%, var(--galaxy-glow-pink) 0%, transparent 55%),
+      radial-gradient(ellipse at 50% 50%, var(--galaxy-glow-core) 0%, transparent 100%),
+      var(--galaxy-gradient);
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    color: hsl(var(--glass-foreground));
+  }
+
+  .glass-strong {
+    background: var(--glass-strong-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-strong-border);
+    color: hsl(var(--glass-foreground));
+  }
+
+  .glass-input {
+    background: var(--glass-input-bg);
+    border: 1px solid var(--glass-input-border);
+    color: var(--glass-input-fg);
+    caret-color: hsl(var(--primary));
+    backdrop-filter: blur(8px);
+  }
+
+  .glass-input::placeholder {
+    color: hsl(var(--placeholder-foreground));
+    opacity: 1;
+  }
+
+  .glass-input:disabled {
+    background: hsl(var(--disabled));
+    border-color: hsl(var(--border));
+    color: hsl(var(--disabled-foreground));
+    opacity: 1;
+  }
+
+  .glass-input:-webkit-autofill,
+  .glass-input:-webkit-autofill:hover,
+  .glass-input:-webkit-autofill:focus,
+  .glass-input:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--glass-input-fg);
+    caret-color: hsl(var(--primary));
+    -webkit-box-shadow: 0 0 0 1000px var(--glass-input-bg) inset;
+    transition: background-color 9999s ease-out;
+  }
+
+  .glow-pink {
+    box-shadow: 0 0 20px rgba(255, 45, 122, 0.45), 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  .glow-violet {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.45), 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(99, 230, 255, 0.35), 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-glow {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    border-radius: 9999px;
+    box-shadow: 0 0 20px rgba(255, 45, 122, 0.4), 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+    color: hsl(var(--primary-foreground)) !important;
+    font-weight: 600;
+  }
+
+  .btn-glow:disabled {
+    background: hsl(var(--disabled));
+    border-color: hsl(var(--border));
+    box-shadow: none;
+    color: hsl(var(--disabled-foreground)) !important;
+  }
+
+  .btn-glow:active {
+    transform: scale(0.96);
+  }
+
+  .font-script {
+    font-family: var(--font-script);
+  }
+
+  .starfield {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
