@@ -23,6 +23,9 @@ jobs:
       SESSION_SECRET: ci-only-local-secret-never-for-production-123456
       AUTH_RECOVERY_TEST_MODE: '1'
       NODE_ENV: test
+      # Unreachable local stub values satisfy import-time client validation; no real AI calls.
+      AI_INTEGRATIONS_OPENAI_BASE_URL: http://127.0.0.1:3999/v1
+      AI_INTEGRATIONS_OPENAI_API_KEY: ci-dummy-key-no-provider-access
       PORT: '3100'
       API_BASE_URL: http://127.0.0.1:3100/api
     services:
@@ -65,7 +68,7 @@ jobs:
       - name: Start disposable local API server
         run: |
           pnpm --filter @workspace/api-server run start > "$RUNNER_TEMP/landoversea-api.log" 2>&1 &
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 20); do
             if curl --fail --silent "$API_BASE_URL/readyz" >/dev/null; then exit 0; fi
             sleep 2
           done
