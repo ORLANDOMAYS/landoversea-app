@@ -1,0 +1,41 @@
+name: LandOverSEA release checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck, unit tests and web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck workspace
+        run: pnpm run typecheck
+      - name: Web unit tests
+        run: pnpm --filter @workspace/landoversea run test:unit
+      - name: Mobile native unit tests
+        run: pnpm --filter @workspace/landoversea-mobile run test:native
+      - name: API unit tests
+        run: pnpm --filter @workspace/api-server run test:api
+      - name: Web production build
+        run: pnpm --filter @workspace/landoversea run build
