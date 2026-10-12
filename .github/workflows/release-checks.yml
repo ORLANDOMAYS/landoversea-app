@@ -75,8 +75,13 @@ jobs:
           echo "Local API did not become ready"
           tail -100 "$RUNNER_TEMP/landoversea-api.log"
           exit 1
-      - name: API tests against disposable CI database
-        run: pnpm --filter @workspace/api-server run test:api
+      # The one photo-upload E2E subtest requires Replit's private object-storage
+      # sidecar and a real bucket. This isolated runner cannot impersonate it.
+      # Keep this test as a separate, explicit live-provider release gate.
+      - name: API tests (Replit-only photo upload excluded)
+        run: |
+          echo "Replit object-storage upload E2E is NOT covered by this GitHub run; verify in a safe Replit test environment before release." >> "$GITHUB_STEP_SUMMARY"
+          pnpm --filter @workspace/api-server exec tsx --test --test-skip-pattern="photo uploads validate bytes" tests/*.test.ts
       - name: Show API server errors on failure
         if: failure()
         run: |
