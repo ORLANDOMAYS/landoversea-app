@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "LandOverSEA"
+description = "A premium international dating and cultural connection app. Features multilingual swipe-based discovery, live chat translation, cultural exchange passport, coaching marketplace with bookings and subscriptions, safety moderation, premium plans, admin tools, and onboarding with profile completion guards. Mobile-first, PWA-ready, and structured for future native iOS/Android packaging."
+version = "1.0.0"
+id = "artifacts/landoversea"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21739
+
+[services.development]
+run = "pnpm --filter @workspace/landoversea run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/landoversea", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/landoversea/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21739"
+BASE_PATH = "/"

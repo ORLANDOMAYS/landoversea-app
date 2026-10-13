@@ -1,0 +1,44 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import authRouter from "./auth";
+import profilesRouter from "./profiles";
+import discoverRouter from "./discover";
+import matchesRouter from "./matches";
+import conversationsRouter from "./conversations";
+import messagesRouter from "./messages";
+import premiumRouter from "./premium";
+import notificationsRouter from "./notifications";
+import safetyRouter from "./safety";
+import verificationRouter from "./verification";
+import coachingRouter from "./coaching";
+import paymentsRouter from "./payments";
+import culturalRouter from "./cultural";
+import languageRouter from "./language";
+import adminRouter from "./admin";
+import adminMigrationsRouter from "./admin-migrations";
+import storageRouter from "./storage";
+import translationsRouter from "./translations";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use(authRouter);
+router.use(profilesRouter);
+router.use(discoverRouter);
+router.use(matchesRouter);
+router.use(conversationsRouter);
+router.use(messagesRouter);
+router.use(premiumRouter);
+router.use(notificationsRouter);
+router.use(safetyRouter);
+router.use(verificationRouter);
+router.use(coachingRouter);
+router.use(paymentsRouter);
+router.use(culturalRouter);
+router.use(languageRouter);
+router.use(adminRouter);
+router.use(adminMigrationsRouter);
+router.use(storageRouter);
+router.use(translationsRouter);
+
+export default router;

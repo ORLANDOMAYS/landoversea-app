@@ -1,0 +1,10 @@
+---
+name: Native subscription boundary
+description: Rules for truthful premium purchase behavior in the iOS and Android app.
+---
+
+Native digital subscriptions must use native App Store and Play Store billing. Do not open a web checkout or imply that mobile purchasing works before the native purchase provider is configured and verified. Use the immutable Supabase subject as the RevenueCat app-user ID on both client and server. RevenueCat CustomerInfo is authoritative only for device presentation; server Premium requires a current real-store subscription that explicitly carries the Premium entitlement. Test Store state is preview-only and never projects backend access. Client claims, guessed billing periods, and webhook arrival order are never sufficient.
+
+**Why:** Web checkout is not the correct purchase path for native digital premium access, and showing a successful-looking mobile purchase flow before store billing exists would be misleading. UUID-versus-local-ID mismatches make the server query the wrong customer, while accepting Test Store or promotional state can grant fake production access. Provider events may be duplicated, delayed, reordered, or arrive under a legacy customer ID. Account switches can also occur before effects or network calls settle; unstamped state or a backend request held inside the native identity queue can leak stale Premium UI or delay logout.
+
+**How to apply:** Keep plan information readable, but disable purchase with localized unavailable copy until products, entitlements, store credentials, restore behavior, and server verification work end to end. Require a real App Store/Play Store subscription whose entitlement list contains Premium; accept Apple sandbox/TestFlight but reject Test Store and promotional grants for backend authorization. Canonicalize legacy webhook identities to the linked Supabase subject, serialize duplicate processing without nested pool acquisition, and record completion only after successful reconciliation. Stamp native state with its owning user, generation-gate stale callbacks, reconcile outside the native identity queue, and never make local logout await provider disconnect.

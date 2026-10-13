@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/landoversea-mobile/"
+title = "LandOverSEA Mobile"
+description = "The complete LandOverSEA dating and cultural-connection experience for iOS and Android, preserving the existing galaxy/glass design and all current features through a native-safe Expo container."
+version = "1.0.0"
+id = "artifacts/landoversea-mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/landoversea-mobile/" ]
+localPort = 22709
+
+[services.development]
+run = "pnpm --filter @workspace/landoversea-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/landoversea-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/landoversea-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "22709"
+BASE_PATH = "/landoversea-mobile/"

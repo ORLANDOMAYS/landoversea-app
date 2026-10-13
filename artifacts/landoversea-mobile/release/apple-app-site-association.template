@@ -1,0 +1,33 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "REPLACE_WITH_APPLE_TEAM_ID.com.base69d7f8da4081d841a49332c3.app",
+        "paths": [
+          "/reset-password",
+          "/discover",
+          "/matches",
+          "/messages",
+          "/messages/*",
+          "/profile",
+          "/profile/*",
+          "/coaches",
+          "/coaches/*",
+          "/events",
+          "/events/*",
+          "/tribes",
+          "/tribes/*",
+          "/workshops",
+          "/workshops/*",
+          "/notifications",
+          "/premium",
+          "/settings",
+          "/culture",
+          "/learning",
+          "/safety"
+        ]
+      }
+    ]
+  }
+}

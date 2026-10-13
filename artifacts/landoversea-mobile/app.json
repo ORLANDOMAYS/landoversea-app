@@ -1,0 +1,165 @@
+{
+  "expo": {
+    "name": "LandOverSEA Mobile",
+    "slug": "landoversea-mobile",
+    "version": "2.121943.2",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "landoversea",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#070014"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.base69d7f8da4081d841a49332c3.app",
+      "associatedDomains": [
+        "applinks:landover-sea.com"
+      ],
+      "infoPlist": {
+        "NSCameraUsageDescription": "LandOverSEA uses the camera for profile photos and identity verification.",
+        "NSMicrophoneUsageDescription": "LandOverSEA uses the microphone to record voice introductions and audio messages.",
+        "NSPhotoLibraryUsageDescription": "LandOverSEA uses your photo library for profile photos, verification, and message attachments."
+      },
+      "buildNumber": "4"
+    },
+    "android": {
+      "package": "com.landoversea.mobile",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#070014"
+      },
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [
+            {
+              "scheme": "landoversea",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/reset-password"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/discover"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/matches"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/messages"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/profile"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/coaches"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/events"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/tribes"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/workshops"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/notifications"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/premium"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/settings"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/culture"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/learning"
+            },
+            {
+              "scheme": "https",
+              "host": "landover-sea.com",
+              "pathPrefix": "/safety"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      "expo-document-picker",
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

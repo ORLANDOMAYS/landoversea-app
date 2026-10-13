@@ -1,0 +1,1 @@
+export const PROFILE_PUBLIC_SELECT = 'id,display_name,bio,avatar_url,age,gender,interested_in,language,verified,premium,city,country,learning_languages,relationship_goal,interests,cultural_interests,countries_of_interest,relocation_openness,long_distance,preferred_min_age,preferred_max_age,created_at,updated_at';

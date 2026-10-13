@@ -1,0 +1,99 @@
+name: LandOverSEA release checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck, unit tests and web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://ci:ci_password@127.0.0.1:5432/landoversea_ci
+      SESSION_SECRET: ci-only-local-secret-never-for-production-123456
+      AUTH_RECOVERY_TEST_MODE: '1'
+      NODE_ENV: test
+      # Unreachable local stub values satisfy import-time client validation; no real AI calls.
+      AI_INTEGRATIONS_OPENAI_BASE_URL: http://127.0.0.1:3999/v1
+      AI_INTEGRATIONS_OPENAI_API_KEY: ci-dummy-key-no-provider-access
+      PORT: '3100'
+      API_BASE_URL: http://127.0.0.1:3100/api
+      TEST_BASE_URL: http://127.0.0.1:3100
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: landoversea_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d landoversea_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck workspace
+        run: pnpm run typecheck
+      - name: Web unit tests
+        run: pnpm --filter @workspace/landoversea run test:unit
+      - name: Mobile native unit tests
+        run: pnpm --filter @workspace/landoversea-mobile run test:native
+      - name: Web production build
+        run: pnpm --filter @workspace/landoversea run build
+      - name: Initialize disposable CI database
+        run: pnpm --filter @workspace/db run push-force
+      - name: Build API bundle for integration tests
+        run: pnpm --filter @workspace/api-server run build
+      - name: Start disposable local API server
+        run: |
+          pnpm --filter @workspace/api-server run start > "$RUNNER_TEMP/landoversea-api.log" 2>&1 &
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent "$API_BASE_URL/readyz" >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "Local API did not become ready"
+          tail -100 "$RUNNER_TEMP/landoversea-api.log"
+          exit 1
+      # The one photo-upload E2E subtest requires Replit's private object-storage
+      # sidecar and a real bucket. This isolated runner cannot impersonate it.
+      # Keep this test as a separate, explicit live-provider release gate.
+      - name: API tests (Replit-only photo upload excluded)
+        run: |
+          echo "Replit object-storage upload E2E is NOT covered by this GitHub run; verify in a safe Replit test environment before release." >> "$GITHUB_STEP_SUMMARY"
+          pnpm --filter @workspace/api-server exec tsx --test --test-skip-pattern="photo uploads validate bytes" tests/*.test.ts
+      - name: Offline registration and email verification integration tests
+        run: |
+          echo "Local test mode uses disposable accounts, local Postgres and no external mail delivery." >> "$GITHUB_STEP_SUMMARY"
+          pnpm --filter @workspace/api-server run test:email-verification
+      - name: Offline registration/login and account deletion regression tests
+        run: |
+          pnpm --filter @workspace/api-server run test:registration
+          pnpm --filter @workspace/api-server run test:delete-account
+      - name: Show API server errors on failure
+        if: failure()
+        run: |
+          if [ -f "$RUNNER_TEMP/landoversea-api.log" ]; then
+            tail -100 "$RUNNER_TEMP/landoversea-api.log"
+          fi
