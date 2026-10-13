@@ -39,7 +39,7 @@ function getFromAddress(): string {
   return (
     process.env.EMAIL_FROM ??
     process.env.MAIL_FROM ??
-    "LandOverSEA <no-reply@landoversea.com>"
+    "LandOverSEA <no-reply@updates.landover-sea.com>"
   );
 }
 
