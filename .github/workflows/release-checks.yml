@@ -87,6 +87,10 @@ jobs:
         run: |
           echo "Local test mode uses disposable accounts, local Postgres and no external mail delivery." >> "$GITHUB_STEP_SUMMARY"
           pnpm --filter @workspace/api-server run test:email-verification
+      - name: Offline registration/login and account deletion regression tests
+        run: |
+          pnpm --filter @workspace/api-server run test:registration
+          pnpm --filter @workspace/api-server run test:delete-account
       - name: Show API server errors on failure
         if: failure()
         run: |
